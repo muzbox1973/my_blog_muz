@@ -1,0 +1,107 @@
+{
+ "images": {
+  "thumbnail": {
+   "type": "thumbnail",
+   "file": "visuals/thumbnail.png",
+   "alt": "프롬프트 잘 쓰는 법 썸네일 — 내 프롬프트는 남들과 다르다, 질문보다 규칙을 먼저 씁니다",
+   "format": "square",
+   "stickers": [
+    {
+     "id": "char-pointing-idea",
+     "scale": 1.5,
+     "kind": "character"
+    },
+    {
+     "id": "tape-blue",
+     "scale": 0.94,
+     "kind": "tape"
+    },
+    {
+     "id": "bubble-yellow",
+     "scale": 1.48,
+     "kind": "bubble"
+    },
+    {
+     "id": "notebook-pen",
+     "scale": 0.6,
+     "kind": "prop"
+    },
+    {
+     "id": "star",
+     "scale": 1.17,
+     "kind": "marker"
+    }
+   ],
+   "size": [
+    1080,
+    1080
+   ]
+  },
+  "five-slots": {
+   "type": "checklist",
+   "file": "visuals/five-slots.png",
+   "alt": "규칙 먼저 프롬프트 5칸 — 역할(누구의 눈으로), 목표(어디에 쓸지), 제약(지킬 것), 출력 형식(모양과 분량), 완료 기준(끝났다고 볼 조건)",
+   "format": "landscape",
+   "stickers": [
+    {
+     "id": "char-explain",
+     "scale": 1.44,
+     "kind": "character"
+    }
+   ],
+   "size": [
+    1280,
+    720
+   ]
+  },
+  "vague-to-clear": {
+   "type": "compare",
+   "file": "visuals/vague-to-clear.png",
+   "alt": "애매한 말 고쳐 쓰기 비교 — 짧게는 3문장 이내로, 전문용어 금지는 처음 나올 때 풀어 쓰기로, 틀리면 안 돼는 확인 필요 표시로 바꾸기",
+   "format": "landscape",
+   "stickers": [
+    {
+     "id": "bulb",
+     "scale": 0.54,
+     "kind": "prop"
+    },
+    {
+     "id": "char-crossed-arms",
+     "scale": 1.4,
+     "kind": "character"
+    }
+   ],
+   "size": [
+    1280,
+    720
+   ]
+  },
+  "checklist": {
+   "type": "checklist",
+   "file": "visuals/checklist.png",
+   "alt": "규칙 먼저 프롬프트 점검표 — 역할·목표 먼저, 애매한 말을 숫자로, 규칙과 자료를 ###로 구분, 빈칸이면 먼저 묻기, 제출 전 자체 점검",
+   "format": "landscape",
+   "stickers": [
+    {
+     "id": "char-thumbsup",
+     "scale": 1.28,
+     "kind": "character"
+    },
+    {
+     "id": "bubble-green",
+     "scale": 1.13,
+     "kind": "bubble"
+    }
+   ],
+   "size": [
+    1280,
+    720
+   ]
+  }
+ },
+ "checks": [],
+ "summary": {
+  "FAIL": 0,
+  "WARN": 0
+ }
+}
