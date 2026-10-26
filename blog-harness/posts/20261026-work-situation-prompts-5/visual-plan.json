@@ -1,0 +1,87 @@
+{
+ "thumbnail_format": "square",
+ "theme": "cream",
+ "brand": "GPT PARK",
+ "source": "Microsoft·OpenAI·Google 프롬프트 안내",
+ "text_sticker_ok": true,
+ "images": [
+  {
+   "id": "thumbnail",
+   "type": "thumbnail",
+   "title": "업무 프롬프트\n5선 템플릿",
+   "highlight": "5선",
+   "subtitle": "메일·회의록·보고서까지 복사해서 쓰세요",
+   "badge": "직장인 필수",
+   "character": "char-pk-laptop-wave",
+   "props": [
+    {
+     "id": "pk-prompt-template",
+     "slot": "tr"
+    },
+    {
+     "id": "pk-coffee-bear",
+     "slot": "gap"
+    }
+   ],
+   "text_sticker_ok": true,
+   "alt": "업무 프롬프트 5선 템플릿 — 메일·회의록·보고서까지 복사해서 쓰는 직장인용 프롬프트"
+  },
+  {
+   "id": "four-slots",
+   "type": "checklist",
+   "kicker": "모든 템플릿의 뼈대",
+   "title": "좋은 업무 프롬프트의 네 칸",
+   "items": [
+    "목표 — 무엇을 할지",
+    "맥락 — 왜·누구를 위해",
+    "결과 형식 — 어떤 모양·분량으로",
+    "자료 — 무엇을 보고 할지"
+   ],
+   "character": "char-pk-chart-explain",
+   "source": "Microsoft·OpenAI·Google 프롬프트 안내",
+   "alt": "좋은 업무 프롬프트의 네 칸 — 목표(무엇을 할지), 맥락(왜·누구를 위해), 결과 형식(어떤 모양·분량으로), 자료(무엇을 보고 할지)"
+  },
+  {
+   "id": "five-situations",
+   "type": "checklist",
+   "kicker": "업무 프롬프트 5선",
+   "title": "상황별로 꼭 넣을 것",
+   "items": [
+    "메일 — 받는 사람·목적·말투·길이",
+    "회의록 — 읽는 사람·결정된 것·남은 일",
+    "보고서 — 읽는 사람과 그 사람이 내릴 결정",
+    "데이터 — 열 설명·표 모양·계산 과정",
+    "아이디어 — 개수·조건·평가 기준"
+   ],
+   "character": "char-pk-books",
+   "alt": "업무 상황별 프롬프트에 꼭 넣을 것 — 메일은 받는 사람·목적·말투·길이, 회의록은 읽는 사람·결정된 것·남은 일, 보고서는 읽는 사람과 그 사람이 내릴 결정, 데이터는 열 설명·표 모양·계산 과정, 아이디어는 개수·조건·평가 기준",
+   "source": "GPT PARK 정리"
+  },
+  {
+   "id": "safety-check",
+   "type": "compare",
+   "kicker": "회사 업무에 AI를 쓰기 전",
+   "title": "그대로 넣지 말고 바꿔서",
+   "left": {
+    "label": "그대로 넣지 말 것",
+    "points": [
+     "고객·직원 이름, 연락처",
+     "단가, 계약 조건",
+     "미공개 실적"
+    ]
+   },
+   "right": {
+    "label": "이렇게 바꿔서",
+    "points": [
+     "가명으로 바꾸기",
+     "회사 규정 먼저 확인",
+     "승인된 AI 서비스 쓰기"
+    ]
+   },
+   "verdict": "보고에 쓸 숫자는 원본에서 한 번 검산",
+   "character": "char-pk-thinking-tablet",
+   "source": "보안뉴스(2023) 국정원 생성형 AI 보안 가이드라인 보도",
+   "alt": "회사 업무에 AI를 쓰기 전 — 이름·연락처, 단가·계약 조건, 미공개 실적은 그대로 넣지 말고 가명으로 바꾸거나 회사 규정을 확인하고 승인된 AI 서비스를 쓰기, 보고에 쓸 숫자는 원본에서 검산"
+  }
+ ]
+}

@@ -1,0 +1,32 @@
+{
+ "seed": "20261026-work-situation-prompts-5|업무 프롬프트\n5선 템플릿",
+ "images": {
+  "five-situations": {
+   "type": "checklist",
+   "file": "visuals/five-situations.png",
+   "alt": "업무 상황별 프롬프트에 꼭 넣을 것 — 메일은 받는 사람·목적·말투·길이, 회의록은 읽는 사람·결정된 것·남은 일, 보고서는 읽는 사람과 그 사람이 내릴 결정, 데이터는 열 설명·표 모양·계산 과정, 아이디어는 개수·조건·평가 기준",
+   "format": "landscape",
+   "stickers": [
+    {
+     "id": "char-pk-books",
+     "scale": 1.13,
+     "kind": "character"
+    }
+   ],
+   "size": [
+    1280,
+    720
+   ],
+   "layout": {
+    "side": "right",
+    "variant": 0,
+    "attempts": 1
+   }
+  }
+ },
+ "checks": [],
+ "summary": {
+  "FAIL": 0,
+  "WARN": 0
+ }
+}
