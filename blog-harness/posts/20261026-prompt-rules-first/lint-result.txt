@@ -1,0 +1,25 @@
+[WARN] VISUALS: 이미지 섹션(BEGIN:visuals) 없음 — 5단계에서 썸네일·인포그래픽 추가
+[WARN] SUB_KW: 보조 키워드 0/5개 본문 등장
+[WARN] PARAGRAPH: 4문장 넘는 문단 1개
+[WARN] TEMP_MARKERS: 임시 표식 남음: [근거#n]×10, [경험 보강 필요]×2
+[PASS] FORMAT: 필수 섹션 모두 존재
+[PASS] TITLE_LEN: 추천 제목 31자 (권장 25~40)
+[PASS] TITLE_KW: 핵심 키워드가 제목 앞쪽에 있음
+[PASS] META_LEN: 메타설명 90자 (권장 80~120)
+[PASS] SLUG: 슬러그 형식 적합: prompt-writing-rules-first
+[PASS] ANSWER_FIRST_LEN: 도입 단락 170자
+[PASS] KW_FIRST100: 핵심 키워드가 도입 100자 안에 있음
+[PASS] H2_COUNT: 본문 H2 6개
+[PASS] H2_QUESTION: 질문형 H2 비율 83% (권장 50%↑)
+[PASS] STRUCTURE: 목록 1개, 표 2개 (합 2개↑ 권장)
+[PASS] DATE: 최종 수정일 표시
+[PASS] STUFFING: 핵심 키워드 2회, 밀도 0.7%
+[PASS] FAQ_COUNT: FAQ 4개
+[PASS] JSONLD_FIELDS: BlogPosting 필수 필드 충족
+[PASS] JSONLD_FAQ_MATCH: FAQPage 질문이 본문 FAQ와 일치
+[PASS] NAVER_SUBHEAD: 네이버 [소제목] 7개 (3개↑ 권장)
+[PASS] NAVER_IMAGE: 이미지 배치 가이드 있음
+[PASS] NAVER_LINKS: 네이버판 외부 링크 0개 (2개 이하 권장)
+[PASS] NAVER_TAGS: 태그 8개 (권장 5~10)
+
+요약: FAIL 0 / WARN 4 / PASS 19 → 기계 점검 통과
