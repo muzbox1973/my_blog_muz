@@ -12,70 +12,50 @@
   "shadow_color": "#9fd3b0"
  },
  "images": {
-  "ten-minute-combos": {
-   "type": "steps",
-   "file": "visuals/ten-minute-combos.webp",
-   "alt": "직장인 아침 메뉴 추천 시간별 조합 — 3분 그릭요거트·바나나·견과, 5분 통밀 토스트·땅콩버터·사과, 7분 잡곡밥·달걀프라이·김·방울토마토, 10분 오트밀·우유·블루베리·호두",
-   "format": "landscape",
+  "thumbnail": {
+   "type": "thumbnail",
+   "file": "visuals/thumbnail.webp",
+   "alt": "건강한 아침식사 10분 조합 공식 — 바쁜 직장인을 위한 단백질·통곡물·채소와 과일·건강한 지방 네 칸 아침",
+   "format": "square",
    "stickers": [
     {
-     "id": "tape-yellow",
-     "scale": 0.57,
-     "kind": "tape"
-    },
-    {
-     "id": "arrow-curve-blue",
-     "scale": 0.58,
-     "kind": "arrow"
-    },
-    {
-     "id": "tape-yellow",
-     "scale": 0.53,
-     "kind": "tape"
-    },
-    {
-     "id": "arrow-curve-blue",
-     "scale": 0.58,
-     "kind": "arrow"
-    },
-    {
-     "id": "tape-yellow",
-     "scale": 0.47,
-     "kind": "tape"
-    },
-    {
-     "id": "arrow-curve-blue",
-     "scale": 0.52,
-     "kind": "arrow"
+     "id": "char-pk-coffee-peace",
+     "scale": 1.45,
+     "kind": "character"
     },
     {
      "id": "tape-blue",
-     "scale": 0.79,
+     "scale": 0.94,
      "kind": "tape"
     },
     {
-     "id": "char-pk-chart-tablet",
-     "scale": 1.31,
-     "kind": "character"
+     "id": "bubble-white",
+     "scale": 1.04,
+     "kind": "bubble"
+    },
+    {
+     "id": "pk-plant",
+     "scale": 0.62,
+     "kind": "prop"
     }
    ],
    "size": [
-    1280,
-    720
+    1080,
+    1080
    ],
    "layout": {
     "side": "right",
-    "variant": 1,
-    "attempts": 2
+    "variant": 0,
+    "attempts": 1
    }
   }
  },
  "checks": [
   {
    "level": "PASS",
-   "image": "ten-minute-combos",
+   "image": "thumbnail",
    "code": "WEBP",
-   "msg": "WebP 변환 259KB → 58KB (품질 90)"
+   "msg": "WebP 변환 294KB → 53KB (품질 90)"
   }
  ],
  "summary": {
