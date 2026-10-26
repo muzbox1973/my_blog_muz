@@ -19,6 +19,7 @@ import base64
 import html
 import json
 import os
+import random
 import re
 import shutil
 import subprocess
@@ -89,9 +90,18 @@ def with_highlight(text, hl, tape_uri):
 class Ctx:
     """이미지 한 장을 만드는 동안 스티커 사용을 기록한다."""
 
-    def __init__(self, cat, rep, img_id):
+    def __init__(self, cat, rep, img_id, side="right", rng=None):
         self.cat, self.rep, self.id = cat, rep, img_id
         self.used = []
+        self.side = side            # 캐릭터가 놓일 쪽 (이미지마다 번갈아/무작위)
+        self.rng = rng or random.Random(0)
+
+    def r(self, a, b):
+        return self.rng.uniform(a, b)
+
+    def flip_char(self, sid, sp):
+        """왼쪽에 놓인 캐릭터는 좌우 반전해 본문 쪽을 보게 한다 (글자 박힌 스티커·flip:false 제외)."""
+        return self.side == "left" and sp.get("flip", True) and not self.cat.get(sid, {}).get("has_text")
 
     def fit(self, sid, box=None, width=None, height=None):
         """표시 크기 → 배율. box=긴 변, width/height=그 변 기준 (여러 개면 가장 작은 배율)."""
@@ -107,7 +117,7 @@ class Ctx:
             cands.append(height / s["h"])
         return min(cands) if cands else 1.0
 
-    def stk(self, sid, x, y, scale=1.0, rot=0, cls="", z=3, extra_style="", box=None):
+    def stk(self, sid, x, y, scale=1.0, rot=0, cls="", z=3, extra_style="", box=None, flip=False):
         """스티커 <img>. x,y는 왼쪽 위 좌표(px). 문자열이면 CSS 그대로 사용. box를 주면 긴 변을 그 크기로."""
         if sid not in self.cat:
             self.rep.add("FAIL", self.id, "STICKER_ID", f"없는 스티커 id: {sid}")
@@ -127,7 +137,7 @@ class Ctx:
             elif v is not None:
                 pos += f"{k}:{v}px;"
         return (f'<img class="stk {s["kind"]} {cls}" data-sid="{sid}" src="{uri(sid, self.cat)}" '
-                f'style="{pos}width:{w}px;height:{h}px;transform:rotate({rot}deg);z-index:{z};{extra_style}" alt="">')
+                f'style="{pos}width:{w}px;height:{h}px;transform:rotate({rot:.1f}deg){" scaleX(-1)" if flip else ""};z-index:{z};{extra_style}" alt="">')
 
     def size(self, sid, scale):
         s = self.cat.get(sid, {"w": 0, "h": 0})
@@ -205,18 +215,25 @@ def props_list(sp):
 
 
 def prop_html(c, p, slots):
+    """소품: slot을 정하지 않으면 남은 자리 중 무작위, 위치는 ±18px 흔들고, 각도·크기도 조금씩 다르게."""
     sid = p.get("id")
     slot = p.get("slot")
+    used = getattr(c, "_slots", set())
     if slot not in slots:
-        used = getattr(c, "_slots", set())
-        slot = next((s for s in slots if s not in used), list(slots)[0])
-    c._slots = getattr(c, "_slots", set()) | {slot}
-    x, y = p.get("x", slots[slot][0]), p.get("y", slots[slot][1])
+        free = [s for s in slots if s not in used] or list(slots)
+        slot = c.rng.choice(free)
+    c._slots = used | {slot}
+    jx, jy = (0, 0) if ("x" in p or "y" in p) else (c.r(-18, 18), c.r(-14, 14))
+    x, y = p.get("x", round(slots[slot][0] + jx)), p.get("y", round(slots[slot][1] + jy))
     kind = c.cat.get(sid, {}).get("kind", "prop")
+    rot = p.get("rot", round(c.r(-14, 14), 1))
     if "scale" in p:  # 예전 방식(원본 배율) 호환
-        return c.stk(sid, x, y, p["scale"], p.get("rot", -6), z=p.get("z", 3))
-    box = p.get("box") or DEFAULT_BOX.get(kind, 120) * p.get("size", 1.0)
-    return c.stk(sid, x, y, rot=p.get("rot", -6), z=p.get("z", 3), box=box)
+        return c.stk(sid, x, y, p["scale"], rot, z=p.get("z", 3))
+    box = p.get("box") or DEFAULT_BOX.get(kind, 120) * p.get("size", 1.0) * c.r(0.88, 1.12)
+    st = c.cat.get(sid)
+    if st and not p.get("box") and "size" not in p:  # 무작위로 키우다 흐려지는 크기(max_scale)를 넘지 않게
+        box = min(box, max(st["w"], st["h"]) * st["max_scale"])
+    return c.stk(sid, x, y, rot=rot, z=p.get("z", 3), box=box)
 
 
 # ---------------------------------------------------------------- 유형별
@@ -235,18 +252,20 @@ def build_thumbnail(c, sp, th):
     fmt = sp.get("_format") or "landscape"
     W, H = THUMB_FORMATS.get(fmt, THUMB_FORMATS["landscape"])
     sq = fmt == "square"
+    L = c.side == "left"                     # 캐릭터가 왼쪽이면 글자·카드는 반대쪽
+    near, far = ("left", "right") if L else ("right", "left")
     tape_id = sp.get("tape", "tape-yellow")
     tape = uri(tape_id, c.cat) if tape_id in c.cat else ""
     ch = sp.get("character", "char-pointing-idea")
     circle = 620 if sq else 640
     parts = [f'<div class="canvas" style="height:{H}px">',
-             f'<div style="position:absolute;right:-70px;bottom:-150px;width:{circle}px;height:{circle}px;border-radius:50%;'
-             f'background:{th["soft"]};opacity:.75"></div>']
-    # 글자 영역: 가로형은 왼쪽 세로 가운데, 정사각형은 위쪽
+             f'<div style="position:absolute;{near}:{-70 - round(c.r(0, 40))}px;bottom:{-150 - round(c.r(0, 40))}px;width:{circle}px;'
+             f'height:{circle}px;border-radius:50%;background:{th["soft"]};opacity:.75"></div>']
+    # 글자 영역: 가로형은 캐릭터 반대쪽 세로 가운데, 정사각형은 위쪽
     if sq:
         parts.append('<div style="position:absolute;left:80px;top:96px;width:920px;z-index:4">')
     else:
-        parts.append('<div style="position:absolute;left:76px;top:0;bottom:0;width:700px;display:flex;'
+        parts.append(f'<div style="position:absolute;{far}:76px;top:0;bottom:0;width:700px;display:flex;'
                      'flex-direction:column;justify-content:center;z-index:4">')
     if sp.get("badge"):
         parts.append(f'<div><span class="pill txt" style="font-size:{32 if sq else 30}px;padding:6px 24px;'
@@ -261,35 +280,43 @@ def build_thumbnail(c, sp, th):
     parts.append("</div>")
     # 캐릭터 (아래 가장자리에 붙임)
     cw = chh = 0
-    right = 50 if sq else 40
+    edge = (50 if sq else 40) + round(c.r(0, 30))
     if ch:
         sc = c.char_scale(ch, sp.get("character_height", 470 if sq else 560), max_w=540 if sq else 520)
         cw, chh = c.size(ch, sc)
-        parts.append(c.stk(ch, f"right:{right}px", c.char_bottom(ch), sc, z=3))
-    cx = W - right - cw
+        parts.append(c.stk(ch, f"{near}:{edge}px", c.char_bottom(ch), sc, z=3, flip=c.flip_char(ch, sp)))
+    inner = edge + cw                         # 캐릭터 안쪽 끝까지의 거리(캐릭터 쪽 가장자리 기준)
     b = sp.get("bubble")
-    bub_left = W
-    if b and b.get("sticker") and sq:
-        bub_left = W - (right + cw * 0.78) - c.size(b["sticker"], bubble_scale(c, b, 145))[0]
-    if sq and sp.get("subtitle"):  # 정사각형: 부제는 왼쪽 아래 테이프 카드 (말풍선·캐릭터를 피해서)
-        card_w = max(min(cx - 80 - 30, bub_left - 80 - 24), 360)
-        parts.append(f'<div class="card" style="position:absolute;left:80px;bottom:170px;width:{card_w}px;'
-                     f'padding:34px 34px 30px;z-index:4">'
-                     + c.stk(sp.get("subtitle_tape", "tape-blue"), "-16px", "-22px", rot=-8, z=6, box=88)
-                     + f'<div class="sub fit txt" data-max="42" data-min="26" style="max-height:120px;font-weight:800;'
-                       f'color:{th["ink"]}">{esc(sp["subtitle"])}</div></div>')
-    b = sp.get("bubble")
+    bs = bw = bh = 0
     if b and b.get("sticker"):
         bs = bubble_scale(c, b, 145)
         bw, bh = c.size(b["sticker"], bs)
-        if sq:  # 얼굴 왼쪽 옆
-            parts.append(bubble_html(c, b, f"right:{round(right + cw * 0.78)}px", f"bottom:{round(chh * 0.66)}px", bs))
+    if sq and sp.get("subtitle"):  # 정사각형: 부제는 캐릭터 반대쪽 아래 테이프 카드 (말풍선·캐릭터를 피해서)
+        avoid = edge + cw * 0.78 + bw if bw else inner
+        card_w = max(min(W - inner - 80 - 30, W - avoid - 80 - 24), 360)
+        tape_side = c.rng.choice(["left", "right"])
+        parts.append(f'<div class="card" style="position:absolute;{far}:80px;bottom:{150 + round(c.r(0, 50))}px;width:{card_w:.0f}px;'
+                     f'padding:34px 34px 30px;z-index:4">'
+                     + c.stk(sp.get("subtitle_tape", "tape-blue"), "-16px" if tape_side == "left" else "calc(100% - 74px)", "-22px",
+                             rot=round(c.r(-12, 12), 1), z=6, box=88)
+                     + f'<div class="sub fit txt" data-max="42" data-min="26" style="max-height:120px;font-weight:800;'
+                       f'color:{th["ink"]}">{esc(sp["subtitle"])}</div></div>')
+    if bw:
+        if sq:  # 얼굴 옆 (캐릭터 안쪽)
+            parts.append(bubble_html(c, b, f"{near}:{round(edge + cw * 0.78)}px", f"bottom:{round(chh * c.r(0.62, 0.72))}px", bs))
         else:
-            parts.append(bubble_html(c, b, max(cx - bw * 0.45, 700), max(H - chh - bh * 0.35, 16), bs))
+            bx_near = max(inner - bw * 0.55, 16)          # 캐릭터 쪽 가장자리에서 말풍선 바깥쪽까지
+            bx_near = min(bx_near, W - 76 - 700 - 12)     # 글자 칸을 넘지 않게
+            by = max(H - chh - bh * c.r(0.2, 0.45), 16)
+            parts.append(bubble_html(c, b, f"{near}:{round(bx_near)}px", by, bs))
+    def mx(x, w=120):  # 오른쪽 기준 좌표를 캐릭터 쪽에 맞게 뒤집기
+        return W - x - w if L else x
+    cx = W - inner
     if sq:
-        slots = {"bl": (96, H - 140), "gap": (cx - 120, H - 150), "tm": (cx + cw * 0.25, H - chh - 120), "tr": (W - 150, H - chh - 150)}
+        slots = {"bl": (mx(96), H - 128), "gap": (mx(cx - 130), H - 124),
+                 "tm": (mx(cx + cw * 0.25), H - chh - 120), "tr": (mx(W - 150), H - chh - 150)}
     else:
-        slots = {"tr": (W - 150, 26), "tm": (cx + cw * 0.15, 20), "gap": (cx - 120, H - 190), "bl": (40, H - 130)}
+        slots = {"tr": (mx(W - 150), 26), "tm": (mx(cx + cw * 0.15), 20), "gap": (mx(cx - 120), H - 190), "bl": (mx(40), H - 130)}
     for p in props_list(sp):
         parts.append(prop_html(c, p, slots))
     parts.append("</div>")
@@ -297,22 +324,25 @@ def build_thumbnail(c, sp, th):
 
 
 def land_frame(c, sp, th, default_char, body, slots_extra=None):
-    """가로형 1280×720 공통 틀: 위쪽 제목(전체 폭) + 왼쪽 본문 칸 + 오른쪽 아래 캐릭터 + 출처 줄.
+    """가로형 1280×720 공통 틀: 위쪽 제목(전체 폭) + 본문 칸 + 아래 구석 캐릭터(이미지마다 왼쪽/오른쪽) + 출처 줄.
     본문 칸(.fit data-box)은 em 단위로 짜여 있어, 넘치면 글자 크기를 통째로 줄인다."""
+    L = c.side == "left"
+    near = "left" if L else "right"
     tape_id = sp.get("tape", "tape-yellow")
     tape = uri(tape_id, c.cat) if tape_id in c.cat else ""
     ch = sp.get("character", default_char)
     cw = chh = 0
     side = []
+    edge = 28 + round(c.r(0, 22))
     if ch:
         b = sp.get("bubble")
         sc = c.char_scale(ch, sp.get("character_height", 380), max_w=420)
         cw, chh = c.size(ch, sc)
-        side.append(c.stk(ch, "right:28px", c.char_bottom(ch), sc, z=2))
-        if b and b.get("sticker"):  # 얼굴 왼쪽 옆
+        side.append(c.stk(ch, f"{near}:{edge}px", c.char_bottom(ch), sc, z=2, flip=c.flip_char(ch, sp)))
+        if b and b.get("sticker"):  # 얼굴 옆 (본문 쪽)
             bs = bubble_scale(c, b, 120)
-            side.append(bubble_html(c, b, f"right:{round(28 + cw * 0.74)}px", f"bottom:{round(chh * 0.70)}px", bs))
-    col_w = LW - 64 - (cw + 28 + 30 if ch else 64)
+            side.append(bubble_html(c, b, f"{near}:{round(edge + cw * c.r(0.7, 0.8))}px", f"bottom:{round(chh * c.r(0.64, 0.74))}px", bs))
+    col_w = LW - 64 - (cw + edge + 30 if ch else 64)
     hd = []
     if sp.get("kicker"):
         hd.append(f'<div class="kicker txt" style="font-size:22px;margin-bottom:8px">{esc(sp["kicker"])}</div>')
@@ -324,16 +354,18 @@ def land_frame(c, sp, th, default_char, body, slots_extra=None):
     src, brand = sp.get("source") or "", sp.get("brand") or ""
     foot = (f'<div class="footer2"><span class="txt">{esc("출처: " + src) if src else ""}</span>'
             f'<span class="txt" style="font-weight:800">{esc(brand)}</span></div>') if (src or brand) else ""
+    push = "margin-left:auto;" if L else ""   # 캐릭터가 왼쪽이면 본문 칸을 오른쪽으로
     parts = [f'<div class="canvas" style="height:{LH}px">',
-             f'<div style="position:absolute;right:-90px;bottom:-170px;width:560px;height:560px;border-radius:50%;'
-             f'background:{th["soft"]};opacity:.55"></div>',
+             f'<div style="position:absolute;{near}:{-90 - round(c.r(0, 40))}px;bottom:{-170 - round(c.r(0, 40))}px;width:560px;height:560px;'
+             f'border-radius:50%;background:{th["soft"]};opacity:.55"></div>',
              '<div style="position:absolute;left:64px;top:40px;bottom:22px;right:64px;display:flex;flex-direction:column;z-index:4">',
              f'<div style="max-width:{LW - 128 - (cw * 0.35 if ch else 0):.0f}px">{"".join(hd)}</div>',
-             f'<div class="fit body" data-box="1" data-max="36" data-min="18" style="width:{col_w}px">{body}</div>',
-             f'<div style="width:{col_w}px">{foot}</div>',
+             f'<div class="fit body" data-box="1" data-max="36" data-min="18" style="width:{col_w}px;{push}">{body}</div>',
+             f'<div style="width:{col_w}px;{push}">{foot}</div>',
              "</div>"]
     parts += side
-    slots = {"tr": (LW - 150, 26), "tm": (LW - 28 - cw * 0.75, LH - chh - 120)}
+    tm_x = (edge + cw * 0.25) if L else (LW - edge - cw * 0.75)
+    slots = {"tr": (LW - 150, 26), "tm": (tm_x, LH - chh - 120)}
     slots.update(slots_extra or {})
     for p in props_list(sp):
         parts.append(prop_html(c, p, slots))
@@ -355,13 +387,15 @@ def build_steps(c, sp, th):
     b = [f'<div style="display:grid;grid-template-columns:repeat({n},1fr);gap:1.25em;width:100%">']
     for i, it in enumerate(items, 1):
         b.append('<div class="card" style="padding:1.05em .85em 1em">')
-        b.append(c.stk(tapes[i % 2], "-14px", "-20px", rot=-9, z=5, box=70))
+        corner = c.rng.choice(["l", "r"])  # 테이프는 카드마다 왼쪽/오른쪽 위, 각도도 다르게
+        b.append(c.stk(tapes[(i + c.rng.randint(0, 1)) % 2], "-14px" if corner == "l" else "calc(100% - 56px)", "-20px",
+                       rot=round(c.r(-15, -4) if corner == "l" else c.r(4, 15), 1), z=5, box=round(c.r(62, 78))))
         b.append(num_badge(i, th))
         b.append(f'<div class="txt" style="font-size:1.02em;font-weight:800;line-height:1.3;margin-top:.55em">{esc(it.get("title", ""))}</div>')
         if it.get("text"):
             b.append(f'<div class="txt sub" style="font-size:.78em;margin-top:.4em">{esc(it["text"])}</div>')
         if i < len(items):  # 다음 카드로 가는 화살표 (카드 사이 틈에)
-            b.append(c.stk(arrow, "calc(100% - 10px)", "40%", rot=38, z=6, box=52))
+            b.append(c.stk(arrow, "calc(100% - 10px)", f"{round(c.r(32, 50))}%", rot=round(c.r(28, 48), 1), z=6, box=round(c.r(48, 58))))
         b.append("</div>")
     b.append("</div>")
     return land_frame(c, sp, th, "char-explain", "".join(b))
@@ -381,7 +415,7 @@ def build_compare(c, sp, th):
     b.append("</div>")
     if sp.get("verdict"):
         b.append(f'<div class="card" style="margin-top:.8em;padding:.6em .9em .6em 3.2em;background:{th["soft"]}">')
-        b.append(c.stk(sp.get("verdict_icon", "bulb"), "14px", "calc(50% - 30px)", rot=-6, z=5, box=60))
+        b.append(c.stk(sp.get("verdict_icon", "bulb"), "14px", "calc(50% - 30px)", rot=round(c.r(-12, 12), 1), z=5, box=60))
         b.append(f'<div class="txt" style="font-size:.84em;font-weight:800;line-height:1.4">{esc(sp["verdict"])}</div></div>')
     b.append("</div>")
     return land_frame(c, sp, th, "char-crossed-arms", "".join(b))
@@ -402,7 +436,7 @@ def build_checklist(c, sp, th):
 
 def build_keypoint(c, sp, th):
     b = ['<div class="card" style="width:100%;padding:1.5em 1.5em 1.3em;margin-top:.6em">',
-         c.stk(sp.get("tape", "tape-yellow"), "calc(50% - 56px)", "-24px", rot=-3, z=6, box=112),
+         c.stk(sp.get("tape", "tape-yellow"), f"calc({round(c.r(22, 72))}% - 56px)", "-24px", rot=round(c.r(-9, 9), 1), z=6, box=round(c.r(100, 124))),
          f'<div class="txt" style="font-size:1.55em;font-weight:900;line-height:1.3;letter-spacing:-.02em">{esc(sp.get("point", sp.get("title", "")))}</div>']
     if sp.get("text"):
         b.append(f'<div class="txt sub" style="font-size:.9em;margin-top:.6em">{esc(sp["text"])}</div>')
@@ -571,46 +605,42 @@ def korean_font_ok():
         return None  # 확인 불가 (Windows·macOS는 대개 기본 한글 글꼴 있음)
 
 
-def render(jobs, rep):
+def measure(br, job, png):
+    """한 장을 렌더해 글자 맞춤·넘침·겹침을 재고 PNG로 저장한다."""
+    pg = br.new_page(viewport={"width": job["W"], "height": job["H"]}, device_scale_factor=1)
+    pg.set_content(job["doc"], wait_until="load")
     try:
-        from playwright.sync_api import sync_playwright
+        pg.evaluate("document.fonts.ready.then(()=>1)")
     except Exception:  # noqa: BLE001
-        rep.add("FAIL", "-", "RENDER", "Python Playwright 없음 — HTML만 생성. "
-                "`pip install playwright` 후 `python -m playwright install chromium` 필요")
-        return
-    with sync_playwright() as p:
-        try:
-            br = p.chromium.launch()
-        except Exception as e:  # noqa: BLE001
-            rep.add("FAIL", "-", "RENDER", f"Chromium 실행 실패 — HTML만 생성 ({str(e)[:120]})")
-            return
-        for j in jobs:
-            pg = br.new_page(viewport={"width": j["W"], "height": j["H"] or 900}, device_scale_factor=1)
-            pg.set_content(j["html"], wait_until="load")
-            try:
-                pg.evaluate("document.fonts.ready.then(()=>1)")
-            except Exception:  # noqa: BLE001
-                pass
-            m = pg.evaluate(MEASURE_JS)
-            # 맞춘 글자 크기를 HTML에도 반영해 저장
-            with open(j["html_path"], "w", encoding="utf-8") as f:
-                f.write("<!doctype html>" + pg.evaluate("document.documentElement.outerHTML"))
-            if j["H"]:
-                pg.screenshot(path=j["png"], clip={"x": 0, "y": 0, "width": j["W"], "height": j["H"]})
-            else:
-                pg.locator(".canvas").screenshot(path=j["png"])
-            pg.close()
-            iid = j["id"]
-            for t in m["overflow"]:
-                rep.add("FAIL", iid, "TEXT_OVERFLOW", f"글자가 상자를 넘침: '{t}' — 글을 줄이거나 나눌 것")
-            for o in m["overlap"]:
-                lv = "FAIL" if o["ratio"] > 0.04 else "WARN"
-                rep.add(lv, iid, "STICKER_OVER_TEXT",
-                        f"{', '.join(o['stickers'])}가 글자 '{o['text']}'를 {o['ratio']:.0%} 가림 — 위치·크기 조정")
-            if m["minFont"] < 17:
-                rep.add("WARN", iid, "SMALL_TEXT", f"가장 작은 글자 {m['minFont']:.0f}px (모바일에서 읽기 어려움)")
-            j["height"] = m["height"]
-        br.close()
+        pass
+    m = pg.evaluate(MEASURE_JS)
+    html_out = "<!doctype html>" + pg.evaluate("document.documentElement.outerHTML")  # 맞춘 글자 크기 반영본
+    pg.screenshot(path=png, clip={"x": 0, "y": 0, "width": job["W"], "height": job["H"]})
+    pg.close()
+    issues = [("FAIL", "TEXT_OVERFLOW", f"글자가 상자를 넘침: '{t}' — 글을 줄이거나 나눌 것") for t in m["overflow"]]
+    for o in m["overlap"]:
+        issues.append(("FAIL" if o["ratio"] > 0.04 else "WARN", "STICKER_OVER_TEXT",
+                       f"{', '.join(o['stickers'])}가 글자 '{o['text']}'를 {o['ratio']:.0%} 가림 — 위치·크기 조정"))
+    if m["minFont"] < 17:
+        issues.append(("WARN", "SMALL_TEXT", f"가장 작은 글자 {m['minFont']:.0f}px (모바일에서 읽기 어려움)"))
+    return issues, html_out
+
+
+def attempts_for(sp, side):
+    """배치 시도 순서: 같은 쪽 다른 무작위 → 반대쪽. side를 직접 정했으면 그 쪽만, layout_fixed면 한 번만."""
+    other = "left" if side == "right" else "right"
+    if sp.get("layout_fixed"):
+        return [(side, 0)]
+    if sp.get("side") in ("left", "right"):
+        return [(side, 0), (side, 1), (side, 2)]
+    return [(side, 0), (side, 1), (other, 0), (other, 1)]
+
+
+def build(cat, sp, iid, sth, side, k, seed):
+    trep = Report()
+    c = Ctx(cat, trep, iid, side, random.Random(f"{seed}|{iid}|{side}|{k}"))
+    W, H, body = BUILDERS[sp["type"]](c, sp, sth)
+    return {"W": W, "H": H, "doc": page_html(W, H, body, sth, sp.get("title", iid)), "ctx": c, "rep": trep}
 
 
 def main():
@@ -619,6 +649,7 @@ def main():
     ap.add_argument("--package", help="article-package.md (숫자 대조용)")
     ap.add_argument("--out", help="출력 폴더 (기본: 계획 파일 옆 visuals/)")
     ap.add_argument("--only", action="append", help="이 id만 다시 만들기 (여러 번 지정 가능)")
+    ap.add_argument("--seed", help="배치 무작위 씨앗 (기본: 계획의 seed → 글 폴더 이름)")
     ap.add_argument("--list", action="store_true", help="스티커 목록 출력")
     a = ap.parse_args()
     cat = load_catalog()
@@ -629,8 +660,8 @@ def main():
         for k, ss in kinds.items():
             print(f"\n[{k}]")
             for s in ss:
-                t = " (글자 박힘)" if s["has_text"] else ""
-                print(f"  {s['id']:<22} {s['w']}x{s['h']}  {s['use_when']}{t}  | 피할 때: {s['avoid']}")
+                t = " (글자 박힘)" if s.get("has_text") else ""
+                print(f"  {s['id']:<22} {s['w']}x{s['h']}  {s.get('use_when') or '(용도 미입력)'}{t}  | 피할 때: {s.get('avoid', '')}")
         print(f"\n미리보기: {os.path.join(STK_DIR, '_preview.png')}")
         return
     if not a.plan:
@@ -638,7 +669,8 @@ def main():
         sys.exit(2)
     with open(a.plan, encoding="utf-8") as f:
         plan = json.load(f)
-    out = a.out or os.path.join(os.path.dirname(os.path.abspath(a.plan)), "visuals")
+    plan_dir = os.path.dirname(os.path.abspath(a.plan))
+    out = a.out or os.path.join(plan_dir, "visuals")
     os.makedirs(out, exist_ok=True)
     rep = Report()
     pkg = None
@@ -652,34 +684,64 @@ def main():
     if korean_font_ok() is False:
         rep.add("FAIL", "-", "FONT", "한글 글꼴 없음 — 글자가 네모로 깨짐. fonts-noto-cjk 설치 필요")
     th = THEMES.get(plan.get("theme", "cream"), THEMES["cream"])
-    jobs, usage = [], {}
-    for sp in plan.get("images", []):
+    # 배치 씨앗: 글마다 다르고, 같은 글을 다시 만들면 같다. 이미지마다 캐릭터 쪽을 번갈아 둔다.
+    seed = str(a.seed or plan.get("seed") or os.path.basename(plan_dir) + "|" + str((plan.get("images") or [{}])[0].get("title", "")))
+    start = random.Random(seed).randint(0, 1)
+    br = pw = None
+    try:
+        from playwright.sync_api import sync_playwright
+        pw = sync_playwright().start()
+        br = pw.chromium.launch()
+    except Exception as e:  # noqa: BLE001
+        rep.add("FAIL", "-", "RENDER", "PNG 렌더 불가 — HTML만 생성. `pip install playwright` 후 "
+                f"`python -m playwright install chromium` 필요 ({str(e)[:80]})")
+    usage = {}
+    for idx, sp in enumerate(plan.get("images", [])):
         iid = sp.get("id") or sp.get("type")
-        if a.only and iid not in a.only:
-            continue
-        if sp.get("type") not in BUILDERS:
+        if (a.only and iid not in a.only) or sp.get("type") not in BUILDERS:
             continue
         sth = THEMES.get(sp.get("theme", plan.get("theme", "cream")), th)
         for k in ("source", "brand"):
             sp.setdefault(k, plan.get(k))
-        c = Ctx(cat, rep, iid)
         if sp["type"] == "thumbnail":
             sp["_format"] = thumb_format(sp, plan) if thumb_format(sp, plan) in THUMB_FORMATS else "landscape"
-        W, H, body = BUILDERS[sp["type"]](c, sp, sth)
-        hp = os.path.join(out, f"{iid}.html")
-        doc = page_html(W, H, body, sth, sp.get("title", iid))
-        with open(hp, "w", encoding="utf-8") as f:
-            f.write(doc)
-        jobs.append({"id": iid, "W": W, "H": H, "html": doc, "html_path": hp, "png": os.path.join(out, f"{iid}.png")})
-        usage[iid] = {"type": sp["type"], "file": f"visuals/{iid}.png", "alt": sp.get("alt", ""),
-                      "format": sp.get("_format", "landscape"), "stickers": c.used, "size": [W, H]}
-    render(jobs, rep)
-    for j in jobs:
-        if "height" in j:
-            usage[j["id"]]["size"] = [j["W"], j["H"] or j["height"]]
-        if not os.path.exists(j["png"]):
-            usage[j["id"]]["file"] = None
-    report = {"images": usage, "checks": rep.items,
+        side = sp.get("side") if sp.get("side") in ("left", "right") else ("right", "left")[(start + idx) % 2]
+        png = os.path.join(out, f"{iid}.png")
+        best = chosen = None
+        tries = attempts_for(sp, side)
+        for n, (sd, k) in enumerate(tries):
+            job = build(cat, sp, iid, sth, sd, k, seed)
+            if br:
+                tmp = os.path.join(out, f".{iid}.try{n}.png")
+                issues, html_out = measure(br, job, tmp)
+            else:
+                tmp, issues, html_out = None, [], job["doc"]
+            cand = {"job": job, "issues": issues, "html": html_out, "tmp": tmp, "side": sd, "k": k, "n": n + 1}
+            best = best or cand
+            if not any(lv == "FAIL" for lv, _, _ in issues):
+                chosen = cand
+                break
+        chosen = chosen or best
+        for n in range(len(tries)):  # 고른 시도만 남기고 임시 PNG 정리
+            t = os.path.join(out, f".{iid}.try{n}.png")
+            if chosen["tmp"] == t:
+                os.replace(t, png)
+            elif os.path.exists(t):
+                os.remove(t)
+        with open(os.path.join(out, f"{iid}.html"), "w", encoding="utf-8") as f:
+            f.write(chosen["html"])
+        rep.items += chosen["job"]["rep"].items
+        for lv, code, msg in chosen["issues"]:
+            rep.add(lv, iid, code, msg)
+        c = chosen["job"]["ctx"]
+        usage[iid] = {"type": sp["type"], "file": f"visuals/{iid}.png" if br else None, "alt": sp.get("alt", ""),
+                      "format": sp.get("_format", "landscape"), "stickers": c.used,
+                      "size": [chosen["job"]["W"], chosen["job"]["H"]],
+                      "layout": {"side": chosen["side"], "variant": chosen["k"], "attempts": chosen["n"]}}
+    if br:
+        br.close()
+        pw.stop()
+    report = {"seed": seed, "images": usage, "checks": rep.items,
               "summary": {lv: sum(1 for i in rep.items if i["level"] == lv) for lv in ("FAIL", "WARN")}}
     with open(os.path.join(out, "visuals-report.json"), "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=1)
@@ -687,7 +749,9 @@ def main():
         print(f"[{it['level']}] {it['image']} {it['code']}: {it['msg']}")
     for iid, u in usage.items():
         ids = ", ".join(f"{s['id']}×{s['scale']}" for s in u["stickers"])
-        print(f"[OK] {iid}: {u['file'] or '(PNG 없음)'} {u['size'][0]}x{u['size'][1]} | 스티커: {ids}")
+        lay = u["layout"]
+        print(f"[OK] {iid}: {u['file'] or '(PNG 없음)'} {u['size'][0]}x{u['size'][1]} | 캐릭터 {lay['side']}"
+              f"{' (시도 ' + str(lay['attempts']) + '번)' if lay['attempts'] > 1 else ''} | 스티커: {ids}")
     print(f"\n요약: FAIL {report['summary']['FAIL']} / WARN {report['summary']['WARN']} → "
           + ("수정 필요" if rep.failed else "이미지 점검 통과"))
     sys.exit(1 if rep.failed else 0)

@@ -7,7 +7,7 @@
     python3 make_post.py article-package.md --h2 highlight     # H2 스타일: badge(기본) · highlight · band
 
 만드는 파일 (패키지와 같은 폴더):
-    post-google.html     워드프레스 '사용자 정의 HTML' 블록·티스토리 HTML 모드에 붙여 넣는 본문
+    post-google.html     워드프레스 '사용자 정의 HTML' 블록·티스토리 HTML 모드에 붙여 넣는 본문 (맨 앞에 대표 썸네일)
                          (<style>·<script>·class 없이 모든 스타일을 style 속성에 넣음, 이미지는 저장소 주소)
     post-naver.html      네이버 스마트에디터용 본문 (미리보기에서 '서식째 복사'로 붙여 넣기)
     titles-hashtags.md   추천 제목·제목 후보·메타설명·슬러그·해시태그·태그·대표 썸네일 주소 (따로 제공)
@@ -514,6 +514,7 @@ def main():
     ap.add_argument("--h2", choices=["badge", "highlight", "band"], default="badge", help="H2 제목 스타일")
     ap.add_argument("--theme", help="색 테마 (기본: visual-plan.json의 theme 또는 cream)")
     ap.add_argument("--keep-h1", action="store_true", help="본문에 H1 제목도 넣기 (기본: 제목 칸에 따로 넣으므로 뺌)")
+    ap.add_argument("--no-thumb", action="store_true", help="대표 썸네일을 본문 맨 앞에 넣지 않기 (기본: 넣음)")
     ap.add_argument("--no-refs", action="store_true", help="참고자료 목록 넣지 않기")
     ap.add_argument("--png", action="store_true", help="preview.png 캡처 (Playwright 필요)")
     a = ap.parse_args()
@@ -532,18 +533,27 @@ def main():
     pal = PALETTES.get(theme or "cream", PALETTES["cream"])
     assets = Assets(base, rep, a.final)
 
+    rows = visuals_rows(sec.get("visuals"))
+    thumb = next((r for r in rows if r["type"] == "thumbnail"), None)
+
+    def thumb_fig(style):  # 대표 썸네일: 본문 맨 앞 (플랫폼이 첫 이미지를 대표 이미지로 쓰는 경우가 많음)
+        if a.no_thumb or not thumb:
+            return ""
+        return style.figure(assets.url(thumb["file"]), thumb["alt"], png_size(os.path.join(base, thumb["file"]))) + "\n"
+    if not thumb and not a.no_thumb:
+        rep.add("FAIL" if a.final else "WARN", "THUMB", "이미지 표에 대표 썸네일(thumbnail)이 없어 본문 맨 앞에 넣지 못함")
+
     st = Style(pal, a.h2)
-    body = render_body(sec.get("body_google", ""), st, assets, rep, a.final, faq_pairs(sec.get("faq")), a.keep_h1)
+    body = thumb_fig(st) + render_body(sec.get("body_google", ""), st, assets, rep, a.final, faq_pairs(sec.get("faq")), a.keep_h1)
     refs = [] if a.no_refs else references(text)
     if refs:
         body += "\n" + st.refs([inline(r, st, rep, a.final, assets) for r in refs])
     google = st.wrap(body)
     st_n = Style(pal, a.h2)
-    naver = st_n.wrap(render_naver(sec.get("body_naver", ""), st_n, assets, rep, a.final))
+    naver = st_n.wrap(thumb_fig(st_n) + render_naver(sec.get("body_naver", ""), st_n, assets, rep, a.final))
     lint_fragment("post-google.html", google, rep, a.final)
     lint_fragment("post-naver.html", naver, rep, a.final)
 
-    rows = visuals_rows(sec.get("visuals"))
     th_md, info = titles_hashtags(sec, assets, rows)
     if not info["rec"]:
         rep.add("FAIL", "TITLE", "추천 제목 없음")

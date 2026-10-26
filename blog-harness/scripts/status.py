@@ -14,6 +14,10 @@ office.html은 status.js를 1초마다 다시 불러오므로 더블클릭으로
     python3 status.py --dir 작업폴더 go 5          # 수정 끝 → 썸네일·인포그래픽 제작 시작
     python3 status.py --dir 작업폴더 go B          # 이미지 끝 → 사람 최종 확인
     python3 status.py --dir 작업폴더 go done       # 사람 승인 후
+
+내장 브라우저(Claude 앱 안 브라우저)로 보여 줄 때:
+    python3 status.py --dir 작업폴더 open-js   → 출력 전체를 https 페이지 탭에서 javascript_tool로 실행 (처음 한 번)
+    python3 status.py --dir 작업폴더 push-js   → 단계가 바뀔 때마다 출력 한 줄을 javascript_tool로 실행
   go 뒤에 문구를 붙이면 그 단계 담당자의 말풍선이 된다:  go 2 "초안 v1: FAQ 작성 중"
 
 세부 기록 (선택):
@@ -286,6 +290,24 @@ def do_go(s, target, detail=""):
         raise ValueError(f"go 단계는 0 1 A 2 3 4 B done 중 하나: '{target}'")
 
 
+# ---- 내장 브라우저용: office.html을 아무 https 페이지에 통째로 써 넣는 코드 ----
+def open_js(d, with_state=True):
+    """내장 브라우저는 사용자 컴퓨터의 파일이나 https 주소만 연다. 그래서 https 페이지(예: https://example.com)를
+    preview_start로 열고, 이 코드를 javascript_tool로 실행해 진행 화면을 그 탭에 그린다. 파일 폴링은 끈다."""
+    src = open(OFFICE_HTML, encoding="utf-8").read()
+    lines = [l.strip() for l in src.splitlines()]
+    html_min = "\n".join(l for l in lines if l and not l.startswith("//"))
+    html_min = html_min.replace("<head>", "<head>\n<script>window.__HARNESS_NO_POLL=1</script>", 1)
+    js = "document.open();document.write(" + json.dumps(html_min, ensure_ascii=False) + ");document.close();"
+    if with_state and os.path.exists(os.path.join(d, "status.json")):
+        s = load(d)
+        s["log"] = s.get("log", [])[-40:]
+        # 화면 스크립트가 준비될 때까지 잠깐 기다렸다가 현재 상태를 넣는다
+        js += ("(function(st,n){(function t(){if(window.__harnessPush)window.__harnessPush(st);"
+               "else if(n++<60)setTimeout(t,100);})();})(" + json.dumps(s, ensure_ascii=True) + ",0);")
+    return js + '"office ready"'
+
+
 # ---- 감시자: 산출물 파일이 생기거나 바뀌면 단계를 자동으로 진행 ----
 def scan(d):
     out = {}
@@ -359,7 +381,10 @@ def main():
     c.add_argument("--mirror", help="사람이 office.html을 여는 컴퓨터 폴더 경로 (작업 폴더와 다를 때)")
     c.add_argument("--no-copy", action="store_true", help="office.html을 복사하지 않음")
     c = sub.add_parser("go"); c.add_argument("target"); c.add_argument("detail", nargs="*")
-    c = sub.add_parser("push-js", help="내장 브라우저 javascript_tool에 넣을 한 줄 출력 (화면이 안 바뀔 때)")
+    c = sub.add_parser("push-js", help="내장 브라우저 javascript_tool에 넣을 상태 전달 코드 출력 (단계마다)")
+    c.add_argument("--tail", type=int, default=40, help="기록은 최근 N개만 보냄 (기본 40)")
+    c = sub.add_parser("open-js", help="내장 브라우저 javascript_tool에 넣을 '진행 화면 띄우기' 코드 출력 (처음 한 번)")
+    c.add_argument("--no-state", action="store_true", help="현재 상태 전달은 빼기")
     c = sub.add_parser("stage"); c.add_argument("stage", choices=STAGES); c.add_argument("--round", type=int)
     c = sub.add_parser("set"); c.add_argument("agent"); c.add_argument("state", choices=STATES); c.add_argument("detail", nargs="*")
     c = sub.add_parser("handoff"); c.add_argument("src"); c.add_argument("dst"); c.add_argument("msg", nargs="*")
@@ -397,8 +422,13 @@ def main():
             return
 
         if args.cmd == "push-js":
-            # office.html에 상태를 직접 밀어 넣는 코드 (파일 읽기가 막힌 화면용)
-            print("window.__harnessPush(" + json.dumps(load(d), ensure_ascii=True) + ")")
+            # office.html에 상태를 직접 밀어 넣는 코드
+            s = load(d)
+            s["log"] = s.get("log", [])[-args.tail:]
+            print("window.__harnessPush(" + json.dumps(s, ensure_ascii=True) + ")")
+            return
+        if args.cmd == "open-js":
+            print(open_js(d, with_state=not args.no_state))
             return
         lock = locked(d)
         lock.__enter__()
