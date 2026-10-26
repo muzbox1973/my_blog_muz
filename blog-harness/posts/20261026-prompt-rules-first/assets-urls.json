@@ -1,6 +1,16 @@
 {
- "ref": "65d8f8e88e3cf281cb66b6d74627c31641cc4fc6",
+ "ref": "0c02436a1df847082ddcc168123496a925a190f8",
  "pushed": true,
  "cdn": "jsdelivr",
- "files": {}
+ "files": {
+  "visuals/checklist.png": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@0c02436a1df847082ddcc168123496a925a190f8/blog-harness/posts/20261026-prompt-rules-first/visuals/checklist.png",
+  "visuals/five-slots.png": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@0c02436a1df847082ddcc168123496a925a190f8/blog-harness/posts/20261026-prompt-rules-first/visuals/five-slots.png",
+  "visuals/thumbnail.png": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@0c02436a1df847082ddcc168123496a925a190f8/blog-harness/posts/20261026-prompt-rules-first/visuals/thumbnail.png",
+  "visuals/vague-to-clear.png": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@0c02436a1df847082ddcc168123496a925a190f8/blog-harness/posts/20261026-prompt-rules-first/visuals/vague-to-clear.png"
+ },
+ "check": {
+  "ok": 0,
+  "fail": [],
+  "unverified": 4
+ }
 }

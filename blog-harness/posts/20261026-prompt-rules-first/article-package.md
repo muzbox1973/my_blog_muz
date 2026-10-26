@@ -61,6 +61,8 @@ AI 답이 매번 달라질 때 내가 바로 줄일 수 있는 원인은 요청�
 | 출력 형식 | 모양과 분량 | 결정 3줄 + 할 일 표, 500자 이내 |
 | 완료 기준 | 끝났다고 볼 조건 | 규칙을 지켰는지 스스로 점검 후 제출 |
 
+![규칙 먼저 프롬프트 5칸 — 역할(누구의 눈으로), 목표(어디에 쓸지), 제약(지킬 것), 출력 형식(모양과 분량), 완료 기준(끝났다고 볼 조건)](visuals/five-slots.png)
+
 ## 애매한 말은 어떻게 고쳐 쓰나요?
 애매한 말은 숫자나 눈에 보이는 행동으로 바꿔 쓰면 됩니다. 오픈AI는 "꽤 짧게" 같은 흐릿한 표현 대신 문장 수처럼 잴 수 있는 제약을 쓰고, 하지 말라는 말만 하지 말고 대신 무엇을 할지 말하라고 권합니다. [근거#3] 앤트로픽도 금지보다 원하는 행동을 적으라고 안내해요. [근거#4]
 
@@ -70,6 +72,8 @@ AI 답이 매번 달라질 때 내가 바로 줄일 수 있는 원인은 요청�
 | 전문용어 쓰지 마 | 전문용어는 처음 나올 때 괄호로 풀어 써 줘 |
 | 적절히 예시를 넣어 줘 | 항목마다 업무 예시 1개씩 넣어 줘 |
 | 틀리면 안 돼 | 확실하지 않은 내용은 "확인 필요"라고 표시해 줘 |
+
+![애매한 말 고쳐 쓰기 비교 — 짧게는 3문장 이내로, 전문용어 금지는 처음 나올 때 풀어 쓰기로, 틀리면 안 돼는 확인 필요 표시로 바꾸기](visuals/vague-to-clear.png)
 
 저는 직접 만든 프롬프트 생성 도구 PromptForge에서 "적절히·필요시·등" 같은 미정 표현을 결과물에 한 번도 남기지 않는 것을 원칙으로 둡니다. [근거#6] 이런 단어가 남아 있다는 건 아직 정하지 않은 규칙이 있다는 신호이기 때문이에요.
 
@@ -98,6 +102,8 @@ AI 답이 매번 달라질 때 내가 바로 줄일 수 있는 원인은 요청�
 아래 FAQ 섹션과 동일.
 
 ## 마무리
+![규칙 먼저 프롬프트 점검표 — 역할·목표 먼저, 애매한 말을 숫자로, 규칙과 자료를 ###로 구분, 빈칸이면 먼저 묻기, 제출 전 자체 점검](visuals/checklist.png)
+
 내가 쓰는 프롬프트가 남들과 다른 점은 단 하나, 질문보다 규칙을 먼저 쓴다는 것입니다. 오늘 가장 자주 하는 업무 하나를 골라 다섯 칸을 채워 보고, 같은 요청을 세 번 반복해도 결과가 비슷하게 나오는지 확인해 보세요.
 
 *작성: GPT PARK(AI 교육자) · 최종 수정: 2026-10-26*
@@ -131,7 +137,7 @@ A. 네, 핵심 원리는 같습니다. 오픈AI, 앤트로픽, 구글의 공식 
       "author": {"@type": "Person", "name": "GPT PARK", "url": "https://gptparkai.com"},
       "datePublished": "2026-10-26",
       "dateModified": "2026-10-26",
-      "image": "",
+      "image": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@0c02436a1df847082ddcc168123496a925a190f8/blog-harness/posts/20261026-prompt-rules-first/visuals/thumbnail.png",
       "mainEntityOfPage": ""
     },
     {
@@ -199,7 +205,14 @@ A. 네, 핵심 원리는 같습니다. 오픈AI, 앤트로픽, 구글의 공식 
 - 외부(1차 출처): OpenAI 프롬프트 가이드 — https://help.openai.com/en/articles/6654000-best-practices-for-prompt-engineering-with-the-openai-api / Anthropic Prompting best practices — https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices
 
 ## 11. 이미지 (5단계: 스티커로 꾸민 썸네일·인포그래픽 — `visual-plan.json` → `visuals/`)
-(5단계에서 채움)
+<!-- BEGIN:visuals -->
+| 위치 | 파일 | 종류 | 사용 스티커 | alt |
+|---|---|---|---|---|
+| 대표 이미지 (정사각형 1080×1080) | visuals/thumbnail.png | thumbnail | char-pointing-idea, bubble-yellow, notebook-pen, star | 프롬프트 잘 쓰는 법 썸네일 — 내 프롬프트는 남들과 다르다, 질문보다 규칙을 먼저 씁니다 |
+| 규칙 먼저 프롬프트에는 무엇을 넣나요? 아래 | visuals/five-slots.png | checklist | char-explain | 규칙 먼저 프롬프트 5칸 — 역할(누구의 눈으로), 목표(어디에 쓸지), 제약(지킬 것), 출력 형식(모양과 분량), 완료 기준(끝났다고 볼 조건) |
+| 애매한 말은 어떻게 고쳐 쓰나요? 아래 | visuals/vague-to-clear.png | compare | char-crossed-arms, bulb | 애매한 말 고쳐 쓰기 비교 — 짧게는 3문장 이내로, 전문용어 금지는 처음 나올 때 풀어 쓰기로, 틀리면 안 돼는 확인 필요 표시로 바꾸기 |
+| 마무리 | visuals/checklist.png | checklist | char-thumbsup, bubble-green | 규칙 먼저 프롬프트 점검표 — 역할·목표 먼저, 애매한 말을 숫자로, 규칙과 자료를 ###로 구분, 빈칸이면 먼저 묻기, 제출 전 자체 점검 |
+<!-- END:visuals -->
 
 ## 12. 참고자료 (발행본 하단 표기용)
 1. Google, Gemini for Google Workspace Prompting guide 101, 2024년 4월, https://services.google.com/fh/files/misc/gemini-for-google-workspace-prompting-guide-101.pdf
