@@ -36,7 +36,7 @@
 | 5 | 마이크로소프트 코파일럿 프롬프트 갤러리(한국어): 고객서비스·재무·인사·마케팅·영업 등 직무별, 이메일·회의 관리·요약·분석 등 작업별로 프롬프트를 분류해 제공. 회의를 결정 사항과 실행 항목으로 요약하는 예시 포함 | Microsoft Adoption, Copilot 프롬프트 갤러리 | 2026년 10월 확인 | https://adoption.microsoft.com/ko-kr/copilot/prompt-gallery/ | 상 (페이지 확인) |
 | 6 | Claude는 맥락을 모르는 유능한 신입 직원과 같아서, 맥락 없는 동료가 헷갈릴 지시는 모델도 헷갈린다 / 지시의 이유를 설명하면 더 정확해진다 | Anthropic, Prompting best practices | 2026년 기준 공식 문서 | https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/claude-prompting-best-practices | 상 (같은 저장소 이전 글 리서치에서 페이지 확인) |
 | 7 | 국가정보원 「챗GPT 등 생성형 AI 활용 보안 가이드라인」 관련 보도: 개인정보를 포함한 기관 내 민감 정보 입력을 지양하라고 권고. 입력한 데이터는 서비스 제공자에게 남고, 비식별 정보도 다른 정보와 결합하면 다시 드러날 수 있다는 이유 | 보안뉴스 | 2023년 8월 6일 | http://www.boannews.com/news/articleView.html?idxno=120359 | 중상 (언론 보도, 페이지 확인) |
-| 8 | ChatGPT 맞춤형 지침: 응답 시 고려할 내용을 미리 적어 두는 기능 | OpenAI 고객센터(한국어), ChatGPT 맞춤형 지침 | 2026년 10월 확인 | https://help.openai.com/ko-kr/articles/8096356-custom-instructions-for-chatgpt | 상 (팩트체커가 페이지 확인) |
+| 8 | ChatGPT 맞춤 지침: 응답 시 고려할 내용을 미리 적어 두는 기능 | OpenAI 고객센터(한국어), ChatGPT 맞춤 지침 | 2026년 10월 확인 | https://help.openai.com/ko-kr/articles/8096356-custom-instructions-for-chatgpt | 상 (팩트체커가 페이지 확인) |
 
 ## 6. 아웃라인 제안
 - H1 후보: ① 업무 프롬프트 5선, 메일·회의록·보고서까지 복사해서 쓰세요 ② 직장인 업무 프롬프트 예시 5가지, 상황별 템플릿 정리
