@@ -58,5 +58,6 @@
  "assets/stickers/sticky-blue.png": "f0d1f40e82484b9934ae1162af7be2e696964ae4cae7ca4bba64d44e983f2501",
  "assets/stickers/sticky-yellow.png": "f0eb3596f5a13623eadfa82c63a30617b87fcd55251662ec5675d7424d129ae0",
  "assets/stickers/tape-blue.png": "352314a9d07b40a244f2926f01b145ddbb94bea4deaf94f72cbf6cb6bb1e32e6",
- "assets/stickers/tape-yellow.png": "fa84be4447cb9cd0856e764590249bf6bfb24e437bd5dd90f530bacc71b2972d"
+ "assets/stickers/tape-yellow.png": "fa84be4447cb9cd0856e764590249bf6bfb24e437bd5dd90f530bacc71b2972d",
+ "scripts/_local_paths.py": "940614d7559b2eab348e2c66be3497e3da68425552c69a7b155d4c8284a73658"
 }
