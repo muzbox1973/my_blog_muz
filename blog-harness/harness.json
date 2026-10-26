@@ -1,0 +1,10 @@
+{
+ "host": "github.com",
+ "owner": "muzbox1973",
+ "repo": "my_blog_muz",
+ "branch": "main",
+ "base": "blog-harness",
+ "cdn": "jsdelivr",
+ "created": "2026-10-26",
+ "version": "2026.10.26-3"
+}
