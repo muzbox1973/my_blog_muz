@@ -1,0 +1,15 @@
+{
+ "ref": "f570f399c1be5dd7f88f3004ed4bc4db5e3334ff",
+ "pushed": true,
+ "cdn": "jsdelivr",
+ "files": {
+  "visuals/four-parts.webp": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@f570f399c1be5dd7f88f3004ed4bc4db5e3334ff/blog-harness-fast/posts/20261026-healthy-breakfast-habits/visuals/four-parts.webp",
+  "visuals/ten-minute-combos.webp": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@f570f399c1be5dd7f88f3004ed4bc4db5e3334ff/blog-harness-fast/posts/20261026-healthy-breakfast-habits/visuals/ten-minute-combos.webp",
+  "visuals/thumbnail.webp": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@f570f399c1be5dd7f88f3004ed4bc4db5e3334ff/blog-harness-fast/posts/20261026-healthy-breakfast-habits/visuals/thumbnail.webp"
+ },
+ "check": {
+  "ok": 0,
+  "fail": [],
+  "unverified": 3
+ }
+}
