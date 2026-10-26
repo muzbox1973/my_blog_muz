@@ -1,0 +1,15 @@
+{
+ "ref": "457f54c625ee7f5e32c6dbf7c9c5fe8df3d7b60f",
+ "pushed": true,
+ "cdn": "jsdelivr",
+ "files": {
+  "visuals/morning-flow.webp": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@457f54c625ee7f5e32c6dbf7c9c5fe8df3d7b60f/blog-harness-fast/posts/20261026-healthy-morning-routine/visuals/morning-flow.webp",
+  "visuals/simple-checklist.webp": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@457f54c625ee7f5e32c6dbf7c9c5fe8df3d7b60f/blog-harness-fast/posts/20261026-healthy-morning-routine/visuals/simple-checklist.webp",
+  "visuals/thumbnail.webp": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@457f54c625ee7f5e32c6dbf7c9c5fe8df3d7b60f/blog-harness-fast/posts/20261026-healthy-morning-routine/visuals/thumbnail.webp"
+ },
+ "check": {
+  "ok": 3,
+  "fail": [],
+  "unverified": 0
+ }
+}

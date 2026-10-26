@@ -20,5 +20,5 @@ healthy-morning-routine
 아침루틴, 건강한아침, 생활습관, 수면습관, 아침운동, 아침식사, 수분섭취, 건강관리
 
 ## 대표 썸네일
-visuals/thumbnail.webp
+https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@457f54c625ee7f5e32c6dbf7c9c5fe8df3d7b60f/blog-harness-fast/posts/20261026-healthy-morning-routine/visuals/thumbnail.webp
 
