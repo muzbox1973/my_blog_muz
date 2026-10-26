@@ -1,5 +1,5 @@
-[FAIL] VISUALS_FILE: 이미지 파일 없음: visuals/thumbnail.webp
 [WARN] TEMP_MARKERS: 임시 표식 남음: [근거#n]×8, [경험 보강 필요]×1
+[PASS] VISUALS: 이미지 3장 등록 (썸네일 포함)
 [PASS] FORMAT: 필수 섹션 모두 존재
 [PASS] TITLE_LEN: 추천 제목 34자 (권장 25~40)
 [PASS] TITLE_KW: 핵심 키워드가 제목 앞쪽에 있음
@@ -18,4 +18,4 @@
 [PASS] JSONLD_FAQ_MATCH: FAQPage 질문이 본문 FAQ와 일치
 [PASS] TAGS: 태그 9개 (권장 5~10)
 
-요약: FAIL 1 / WARN 1 / PASS 17 → 수정 필요
+요약: FAIL 0 / WARN 1 / PASS 18 → 기계 점검 통과

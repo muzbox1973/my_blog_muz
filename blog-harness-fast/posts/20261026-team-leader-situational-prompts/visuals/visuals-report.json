@@ -12,51 +12,21 @@
   "shadow_color": "#9fd3b0"
  },
  "images": {
-  "steps-1": {
-   "type": "steps",
-   "file": "visuals/steps-1.webp",
-   "alt": "상황별 프롬프트 네 칸 공식 — 역할(누구처럼), 작업(무엇을), 맥락(왜·누가 읽나), 형식(어떤 모양으로)",
+  "check-1": {
+   "type": "checklist",
+   "file": "visuals/check-1.webp",
+   "alt": "메일·회의 프롬프트에 넣을 것 체크리스트 — 받는 사람, 어조, 분량, 대안, 할 일·담당자·기한 표, 빈칸은 미정 표시",
    "format": "landscape",
    "stickers": [
     {
-     "id": "tape-blue",
-     "scale": 0.81,
-     "kind": "tape"
-    },
-    {
-     "id": "arrow-curve-blue",
-     "scale": 0.51,
-     "kind": "arrow"
-    },
-    {
-     "id": "tape-blue",
-     "scale": 0.69,
-     "kind": "tape"
-    },
-    {
-     "id": "arrow-curve-blue",
-     "scale": 0.6,
-     "kind": "arrow"
-    },
-    {
-     "id": "tape-yellow",
-     "scale": 0.55,
-     "kind": "tape"
-    },
-    {
-     "id": "arrow-curve-blue",
-     "scale": 0.55,
-     "kind": "arrow"
-    },
-    {
-     "id": "tape-yellow",
-     "scale": 0.51,
-     "kind": "tape"
-    },
-    {
-     "id": "char-explain",
-     "scale": 1.44,
+     "id": "char-thumbsup",
+     "scale": 1.28,
      "kind": "character"
+    },
+    {
+     "id": "checklist",
+     "scale": 1.18,
+     "kind": "prop"
     }
    ],
    "size": [
@@ -64,7 +34,7 @@
     720
    ],
    "layout": {
-    "side": "left",
+    "side": "right",
     "variant": 0,
     "attempts": 1
    }
@@ -73,9 +43,9 @@
  "checks": [
   {
    "level": "PASS",
-   "image": "steps-1",
+   "image": "check-1",
    "code": "WEBP",
-   "msg": "WebP 변환 266KB → 67KB (품질 90)"
+   "msg": "WebP 변환 264KB → 68KB (품질 90)"
   }
  ],
  "summary": {

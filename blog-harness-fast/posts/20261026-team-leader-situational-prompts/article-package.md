@@ -40,9 +40,9 @@ team-leader-situational-prompts
 
 ## 팀장은 왜 프롬프트를 상황별로 알려주나요?
 
-팀장이 프롬프트를 상황별로 알려주는 이유는 AI가 일의 배경을 모르는 신입 직원과 비슷하기 때문이에요. Anthropic은 Claude 공식 문서에서 AI를 "뛰어나지만 회사 사정을 모르는 신입 직원"처럼 생각하고, 원하는 것을 정확히 설명할수록 결과가 좋아진다고 안내해요. [근거#5]
+팀장이 프롬프트를 상황별로 알려주는 이유는 AI가 일의 배경을 모르는 신입 직원과 비슷하기 때문이에요. Anthropic은 Claude 공식 문서에서 Claude를 "뛰어나지만 팀의 규칙과 업무 방식을 모르는 신입 직원"처럼 생각하고, 원하는 것을 정확히 설명할수록 결과가 좋아진다고 안내해요. [근거#5]
 
-그래서 저는 "AI한테 물어봐"보다 "이 상황에선 이 틀로 시켜 봐"가 더 쓸모 있는 조언이라고 생각해요. 구글의 2024년 4월판 「Gemini for Google Workspace 프롬프트 가이드 101」 기준으로, 성공적인 프롬프트는 평균 약 21단어였고 사람들이 흔히 시도하는 프롬프트는 9단어 미만이었어요(영어 단어 기준). [근거#2]
+그래서 저는 "AI한테 물어봐"보다 "이 상황에선 이 틀로 시켜 봐"가 더 쓸모 있는 조언이라고 생각해요. 구글의 「Gemini for Google Workspace 프롬프트 가이드 101」(2024년 4월판)은 Workspace Labs 프로그램에서 가장 성공적이었던 프롬프트가 평균 약 21단어였고, 사람들이 흔히 시도하는 프롬프트는 대개 9단어 미만이었다고 밝혀요(영문 가이드 기준). [근거#2]
 
 [경험 보강 필요: 예) 팀원에게 프롬프트 틀을 알려준 뒤 보고서 초안이 어떻게 달라졌는지 한두 문장]
 
@@ -85,7 +85,7 @@ team-leader-situational-prompts
 
 ## 메일·회의 상황에서는 어떤 프롬프트를 쓰나요?
 
-메일 프롬프트와 회의록 프롬프트는 받는 사람, 어조, 다음 행동을 함께 적어 주면 결과가 안정돼요. OpenAI 도움말 센터도 원하는 어조를 "정중한", "친근한" 같은 형용사로 알려 주라고 권해요. [근거#4]
+메일 프롬프트와 회의록 프롬프트는 받는 사람, 어조, 다음 행동을 함께 적어 주면 결과가 안정돼요. OpenAI 도움말 센터도 원하는 어조를 "격식 있는", "친근한" 같은 형용사로 알려 주라고 권해요. [근거#4]
 
 **⑤ 일정을 조율하거나 거절할 때**
 > [상대: 협력사 담당자]에게 보낼 메일을 써 줘. 요청받은 [일정/업무]를 이번 주에는 어렵다고 정중하게 알리고, 대안 날짜 두 개를 제안해 줘. 어조는 정중하지만 분명하게, 5문장 이내로.
@@ -122,7 +122,7 @@ AI 답이 마음에 안 들면 처음부터 다시 쓰기보다 무엇이 아쉬
 - "숫자는 그대로 두고 문장만 쉽게 바꿔 줘"
 - "이 답에서 틀렸을 수 있는 부분을 표시해 줘"
 
-Anthropic 문서는 맥락이 적은 동료에게 프롬프트를 보여 줬을 때 헷갈려하면 AI도 헷갈린다는 점검법을 소개해요. [근거#5] 결과가 엉뚱하면 프롬프트를 옆자리 동료가 읽는다고 생각하고 빠진 맥락을 채워 보세요.
+Anthropic 문서는 맥락이 적은 동료에게 프롬프트를 보여 줬을 때 헷갈려하면 Claude도 헷갈린다는 점검법을 소개해요. [근거#5] 결과가 엉뚱하면 프롬프트를 옆자리 동료가 읽는다고 생각하고 빠진 맥락을 채워 보세요.
 
 ## 회사 업무에 프롬프트를 쓸 때 무엇을 조심해야 하나요?
 
@@ -183,7 +183,7 @@ A. 제가 권하는 순서는 네 칸 틀을 먼저 알려 주고, 지시 확인
       "author": {"@type": "Person", "name": "GPT PARK"},
       "datePublished": "2026-10-26",
       "dateModified": "2026-10-26",
-      "image": "",
+      "image": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@4fad9ca2bb672968fbd16bde730b7d86922544b9/blog-harness-fast/posts/20261026-team-leader-situational-prompts/visuals/thumbnail.webp",
       "mainEntityOfPage": ""
     },
     {
@@ -220,10 +220,8 @@ A. 제가 권하는 순서는 네 칸 틀을 먼저 알려 주고, 지시 확인
 
 ## 11. 참고자료 (발행본 하단 표기용)
 1. Google, Gemini for Google Workspace: Prompting Guide 101, 2024년 4월판, https://services.google.com/fh/files/misc/gemini-for-google-workspace-prompting-guide-101.pdf
-2. Google, Gemini for Google Workspace: Prompting Guide 101, 2024년 4월판, https://services.google.com/fh/files/misc/gemini-for-google-workspace-prompting-guide-101.pdf
-3. Google, Gemini for Google Workspace: Prompting Guide 101, 2024년 4월판, https://services.google.com/fh/files/misc/gemini-for-google-workspace-prompting-guide-101.pdf
-4. OpenAI 도움말 센터, Prompt engineering best practices for ChatGPT, 2026년 10월 열람, https://help.openai.com/en/articles/10032626-prompt-engineering-best-practices-for-chatgpt
-5. Anthropic, Claude Docs — Be clear and direct, 2026년 10월 열람, https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/be-clear-and-direct
+2. OpenAI 도움말 센터, Prompt engineering best practices for ChatGPT, 2026년 10월 열람, https://help.openai.com/en/articles/10032626-prompt-engineering-best-practices-for-chatgpt
+3. Anthropic, Claude Docs — Be clear and direct, 2026년 10월 열람, https://platform.claude.com/docs/en/build-with-claude/prompt-engineering/be-clear-and-direct
 
 ## 12. 자체 점검 (AEO 6문항)
 1. 첫 단락만으로 답이 되는가: 예 — 정의(네 칸 틀)와 이 글의 내용(10개, 복사해 쓰기)을 첫 단락에 제시
