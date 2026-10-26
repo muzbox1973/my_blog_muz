@@ -1,0 +1,15 @@
+{
+ "ref": "4fad9ca2bb672968fbd16bde730b7d86922544b9",
+ "pushed": true,
+ "cdn": "jsdelivr",
+ "files": {
+  "visuals/check-1.webp": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@4fad9ca2bb672968fbd16bde730b7d86922544b9/blog-harness-fast/posts/20261026-team-leader-situational-prompts/visuals/check-1.webp",
+  "visuals/steps-1.webp": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@4fad9ca2bb672968fbd16bde730b7d86922544b9/blog-harness-fast/posts/20261026-team-leader-situational-prompts/visuals/steps-1.webp",
+  "visuals/thumbnail.webp": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@4fad9ca2bb672968fbd16bde730b7d86922544b9/blog-harness-fast/posts/20261026-team-leader-situational-prompts/visuals/thumbnail.webp"
+ },
+ "check": {
+  "ok": 0,
+  "fail": [],
+  "unverified": 3
+ }
+}
