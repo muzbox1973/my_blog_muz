@@ -1,0 +1,85 @@
+{
+ "seed": "78e59d06",
+ "style": {
+  "frame": "edge",
+  "frame_color": "#1f5f5b",
+  "frame_inset": 12,
+  "line": "#1f5f5b",
+  "card_bw": 3,
+  "card_bs": "solid",
+  "card_radius": 34,
+  "card_shadow": "offset",
+  "shadow_color": "#9fd3b0"
+ },
+ "images": {
+  "ten-minute-combos": {
+   "type": "steps",
+   "file": "visuals/ten-minute-combos.webp",
+   "alt": "직장인 아침 메뉴 추천 시간별 조합 — 3분 그릭요거트·바나나·견과, 5분 통밀 토스트·땅콩버터·사과, 7분 잡곡밥·달걀프라이·김·방울토마토, 10분 오트밀·우유·블루베리·호두",
+   "format": "landscape",
+   "stickers": [
+    {
+     "id": "tape-yellow",
+     "scale": 0.57,
+     "kind": "tape"
+    },
+    {
+     "id": "arrow-curve-blue",
+     "scale": 0.58,
+     "kind": "arrow"
+    },
+    {
+     "id": "tape-yellow",
+     "scale": 0.53,
+     "kind": "tape"
+    },
+    {
+     "id": "arrow-curve-blue",
+     "scale": 0.58,
+     "kind": "arrow"
+    },
+    {
+     "id": "tape-yellow",
+     "scale": 0.47,
+     "kind": "tape"
+    },
+    {
+     "id": "arrow-curve-blue",
+     "scale": 0.52,
+     "kind": "arrow"
+    },
+    {
+     "id": "tape-blue",
+     "scale": 0.79,
+     "kind": "tape"
+    },
+    {
+     "id": "char-pk-chart-tablet",
+     "scale": 1.31,
+     "kind": "character"
+    }
+   ],
+   "size": [
+    1280,
+    720
+   ],
+   "layout": {
+    "side": "right",
+    "variant": 1,
+    "attempts": 2
+   }
+  }
+ },
+ "checks": [
+  {
+   "level": "PASS",
+   "image": "ten-minute-combos",
+   "code": "WEBP",
+   "msg": "WebP 변환 259KB → 58KB (품질 90)"
+  }
+ ],
+ "summary": {
+  "FAIL": 0,
+  "WARN": 0
+ }
+}

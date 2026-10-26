@@ -328,16 +328,20 @@ def on_file(s, name):
     elif name == "article-package.md" and GO_RANK.get(cur, 0) < 2:
         go_to(s, "2", source="article-package.md 감지")
     elif name in REVIEW_FILES:
+        # fast: 기계 점검(lint)은 초안·수정 중에도 수시로 돌리므로 단계를 옮기지 않는다.
+        # 재검토 라운드가 없으므로 수정(4) 이후에는 검토(3)로 되돌아가지 않는다.
         r = REVIEW_FILES[name]
-        if cur == "4" or GO_RANK.get(cur, 0) < 3:
+        if r != "lint" and GO_RANK.get(cur, 0) < 3:
             go_to(s, "3", source=f"{name} 감지")
-        if s["agents"][r]["state"] != "done":
+        if GO_RANK.get(s.get("stage", "0"), 0) >= 3 and s["agents"][r]["state"] not in ("done",):
             do_set(s, r, "done", "검토 결과 저장됨")
             do_handoff(s, r, ["writer"], {"seo": "SEO·AEO 검토표", "fact": "사실검증표", "lint": "기계 점검 결과"}[r])
     elif name == "changelog.md" and GO_RANK.get(cur, 0) < 4:
         go_to(s, "4", source="changelog.md 감지")
-    elif name == "visual-plan.json" and GO_RANK.get(cur, 0) < 5:
-        go_to(s, "5", source="visual-plan.json 감지")
+    elif name == "visual-plan.json":
+        # fast: 이미지는 팩트체크와 동시에 만든다 → 단계는 그대로 두고 디자이너만 작업 중으로
+        if s["agents"]["design"]["state"] not in ("working", "done"):
+            do_set(s, "design", "working", "이미지 제작 (팩트체크와 동시)")
 
 
 def watch(d, token):

@@ -1,0 +1,73 @@
+{
+ "thumbnail_format": "square",
+ "theme": "cream",
+ "brand": "GPT PARK",
+ "source": "GPT PARK 정리",
+ "images": [
+  {
+   "id": "thumbnail",
+   "type": "thumbnail",
+   "title": "건강한 아침식사\n10분 조합 공식",
+   "highlight": "10분",
+   "subtitle": "바쁜 직장인의 네 칸 아침",
+   "badge": "직장인 아침",
+   "character": "char-pk-coffee-peace",
+   "character_height": 470,
+   "bubble": {
+    "sticker": "bubble-white",
+    "text": "네 칸만!"
+   },
+   "props": [
+    {
+     "id": "pk-plant",
+     "slot": "tr"
+    }
+   ],
+   "alt": "건강한 아침식사 10분 조합 공식 — 바쁜 직장인을 위한 단백질·통곡물·채소와 과일·건강한 지방 네 칸 아침"
+  },
+  {
+   "id": "four-parts",
+   "type": "checklist",
+   "title": "건강한 아침 한 접시, 네 칸 채우기",
+   "highlight": "네 칸",
+   "items": [
+    "단백질 — 달걀, 두부, 그릭요거트, 견과 버터",
+    "통곡물 — 잡곡밥, 100% 통밀빵, 오트밀",
+    "채소·과일 — 방울토마토, 바나나, 사과",
+    "건강한 지방 — 견과류 한 줌, 아보카도 반 개"
+   ],
+   "character": "char-pk-pointing-laptop",
+   "character_height": 440,
+   "source": "Harvard Health Publishing(2017·2022) 바탕 GPT PARK 정리",
+   "alt": "건강한 아침식사 네 가지 구성 — 단백질(달걀·두부·그릭요거트), 통곡물(잡곡밥·통밀빵·오트밀), 채소·과일, 건강한 지방(견과류·아보카도 반 개)"
+  },
+  {
+   "id": "ten-minute-combos",
+   "type": "steps",
+   "title": "바쁜 아침 10분, 시간별 조합",
+   "highlight": "10분",
+   "items": [
+    {
+     "title": "3분",
+     "text": "요거트 바나나 견과"
+    },
+    {
+     "title": "5분",
+     "text": "통밀빵 땅콩버터 사과"
+    },
+    {
+     "title": "7분",
+     "text": "잡곡밥 달걀 김 토마토"
+    },
+    {
+     "title": "10분",
+     "text": "오트밀 우유 블루베리"
+    }
+   ],
+   "character": "char-pk-chart-tablet",
+   "character_height": 440,
+   "source": "GPT PARK 정리",
+   "alt": "직장인 아침 메뉴 추천 시간별 조합 — 3분 그릭요거트·바나나·견과, 5분 통밀 토스트·땅콩버터·사과, 7분 잡곡밥·달걀프라이·김·방울토마토, 10분 오트밀·우유·블루베리·호두"
+  }
+ ]
+}
