@@ -1,6 +1,6 @@
 # 기사 패키지: 업무 상황별 프롬프트 5선
 
-> 작성일: 2026-10-26 · 버전: v2 · 상태: 초안(발행 전 사람 승인 필요)
+> 작성일: 2026-10-26 · 버전: v2.1(이미지 반영) · 상태: 초안(발행 전 사람 승인 필요)
 > `<!-- BEGIN:xxx -->` / `<!-- END:xxx -->` 표식은 `scripts/check_article.py`가 읽는다. 지우지 말 것.
 
 ## 1. 키워드
@@ -168,7 +168,7 @@ A. 업무 문서를 한국어로 받을 거라면 한국어로 써도 괜찮아�
       "author": {"@type": "Person", "name": "GPT PARK", "url": "https://gptparkai.com"},
       "datePublished": "2026-10-26",
       "dateModified": "2026-10-26",
-      "image": "visuals/thumbnail.png",
+      "image": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@a65f5f20e383abc7b664ef7850a4c421817cb1a9/blog-harness/posts/20261026-work-situation-prompts-5/visuals/thumbnail.png",
       "mainEntityOfPage": "",
       "inLanguage": "ko-KR"
     }
@@ -259,6 +259,10 @@ A. 업무 문서를 한국어로 받을 거라면 한국어로 써도 괜찮아�
 <!-- BEGIN:visuals -->
 | 위치 | 파일 | 종류 | 사용 스티커 | alt |
 |---|---|---|---|---|
+| 대표 이미지 (정사각형 1080×1080) | visuals/thumbnail.png | thumbnail | char-pk-laptop-wave, pk-prompt-template, pk-coffee-bear | 업무 프롬프트 5선 템플릿 — 메일·회의록·보고서까지 복사해서 쓰는 직장인용 프롬프트 |
+| 업무 프롬프트는 어떻게 써야 결과가 좋아지나요? 아래 | visuals/four-slots.png | checklist | char-pk-chart-explain | 좋은 업무 프롬프트의 네 칸 — 목표(무엇을 할지), 맥락(왜·누구를 위해), 결과 형식(어떤 모양·분량으로), 자료(무엇을 보고 할지) |
+| 결과가 마음에 안 들 때는 어떻게 고치나요? 아래 | visuals/five-situations.png | checklist | char-pk-books | 업무 상황별 프롬프트에 꼭 넣을 것 — 메일은 받는 사람·목적·말투·길이, 회의록은 읽는 사람·결정된 것·남은 일, 보고서는 읽는 사람과 그 사람이 내릴 결정, 데이터는 열 설명·표 모양·계산 과정, 아이디어는 개수·조건·평가 기준 |
+| 회사 업무에 AI를 쓸 때 무엇을 조심해야 하나요? 아래 | visuals/safety-check.png | compare | char-pk-thinking-tablet, bulb | 회사 업무에 AI를 쓰기 전 — 이름·연락처, 단가·계약 조건, 미공개 실적은 그대로 넣지 말고 가명으로 바꾸거나 회사 규정을 확인하고 승인된 AI 서비스를 쓰기, 보고에 쓸 숫자는 원본에서 검산 |
 <!-- END:visuals -->
 - 본문 이미지·인포그래픽은 모두 가로형 1280×720. 썸네일만 0단계에서 사람이 고른 비율.
 

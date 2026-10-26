@@ -1,6 +1,16 @@
 {
- "ref": "4a7422d96925e89bb9f1405fbbcf4bdbea88db40",
+ "ref": "a65f5f20e383abc7b664ef7850a4c421817cb1a9",
  "pushed": true,
  "cdn": "jsdelivr",
- "files": {}
+ "files": {
+  "visuals/five-situations.png": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@a65f5f20e383abc7b664ef7850a4c421817cb1a9/blog-harness/posts/20261026-work-situation-prompts-5/visuals/five-situations.png",
+  "visuals/four-slots.png": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@a65f5f20e383abc7b664ef7850a4c421817cb1a9/blog-harness/posts/20261026-work-situation-prompts-5/visuals/four-slots.png",
+  "visuals/safety-check.png": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@a65f5f20e383abc7b664ef7850a4c421817cb1a9/blog-harness/posts/20261026-work-situation-prompts-5/visuals/safety-check.png",
+  "visuals/thumbnail.png": "https://cdn.jsdelivr.net/gh/muzbox1973/my_blog_muz@a65f5f20e383abc7b664ef7850a4c421817cb1a9/blog-harness/posts/20261026-work-situation-prompts-5/visuals/thumbnail.png"
+ },
+ "check": {
+  "ok": 0,
+  "fail": [],
+  "unverified": 4
+ }
 }
