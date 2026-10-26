@@ -1,0 +1,81 @@
+{
+ "thumbnail_format": "square",
+ "theme": "cream",
+ "brand": "GPT PARK",
+ "source": "GPT PARK 정리",
+ "images": [
+  {
+   "id": "thumbnail",
+   "type": "thumbnail",
+   "title": "팀장이 알려주는\n상황별 프롬프트",
+   "highlight": "프롬프트",
+   "subtitle": "보고서부터 인수인계까지",
+   "badge": "복사해서 쓰는 템플릿 10개",
+   "character": "char-pointing-idea",
+   "bubble": {
+    "sticker": "bubble-yellow",
+    "text": "이 틀로!"
+   },
+   "props": [
+    {
+     "id": "notebook-pen",
+     "slot": "gap"
+    },
+    {
+     "id": "coffee-mug",
+     "slot": "tr"
+    }
+   ],
+   "alt": "팀장이 알려주는 상황별 프롬프트 10개 — 보고서부터 인수인계까지 복사해서 쓰는 업무 템플릿"
+  },
+  {
+   "id": "steps-1",
+   "type": "steps",
+   "title": "상황별 프롬프트 네 칸 공식",
+   "highlight": "네 칸",
+   "items": [
+    {
+     "title": "역할",
+     "text": "누구\n처럼?"
+    },
+    {
+     "title": "작업",
+     "text": "무엇을?"
+    },
+    {
+     "title": "맥락",
+     "text": "왜?\n누가 읽나?"
+    },
+    {
+     "title": "형식",
+     "text": "어떤 모양?"
+    }
+   ],
+   "character": "char-explain",
+   "source": "구글 프롬프트 가이드 101(2024년 4월판) 바탕 GPT PARK 정리",
+   "alt": "상황별 프롬프트 네 칸 공식 — 역할(누구처럼), 작업(무엇을), 맥락(왜·누가 읽나), 형식(어떤 모양으로)"
+  },
+  {
+   "id": "check-1",
+   "type": "checklist",
+   "title": "메일·회의 프롬프트에 넣을 것",
+   "highlight": "넣을 것",
+   "items": [
+    "받는 사람: 누구에게 보내나",
+    "어조: 정중하지만 분명하게",
+    "분량: 5문장 이내",
+    "대안: 날짜 두 개 제안",
+    "회의록: 할 일 | 담당자 | 기한 표",
+    "빈칸은 \"미정\"으로 표시"
+   ],
+   "character": "char-thumbsup",
+   "props": [
+    {
+     "id": "checklist",
+     "slot": "tr"
+    }
+   ],
+   "alt": "메일·회의 프롬프트에 넣을 것 체크리스트 — 받는 사람, 어조, 분량, 대안, 할 일·담당자·기한 표, 빈칸은 미정 표시"
+  }
+ ]
+}

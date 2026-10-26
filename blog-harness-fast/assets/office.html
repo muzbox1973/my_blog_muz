@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>블로그 편집국 – 진행 상황</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#e6ecea; --panel:#f7faf9; --ink:#1d2a3a; --sub:#55657a; --line:#c9d4d1;
+  --working:#d9921a; --done:#2f9566; --blocked:#d24b40; --review:#4b6cf0; --idle:#8a9aa6;
+  --display:"Do Hyeon","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --body:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#121a20; --panel:#1a252d; --ink:#e3ebee; --sub:#9aabb6; --line:#2c3a44;
+    --working:#f0b03c; --done:#4cc28a; --blocked:#f06a5e; --review:#7d95ff; --idle:#71838f; color-scheme:dark;}
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;
+  padding:max(16px,env(safe-area-inset-top)) 16px max(24px,env(safe-area-inset-bottom))}
+.wrap{max-width:1180px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:8px 24px;margin-bottom:14px}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(26px,4vw,40px);line-height:1.1;margin:0}
+.stageline{color:var(--sub);margin:4px 0 0;font-size:15px}
+.conn{font-size:14px;color:var(--sub);display:flex;align-items:center;gap:8px}
+.conn i{width:10px;height:10px;border-radius:50%;background:var(--idle);display:inline-block}
+.conn.live i{background:var(--done)} .conn.demo i{background:var(--working)} .conn.lost i{background:var(--blocked)}
+.grid{display:grid;grid-template-columns:minmax(0,2.1fr) minmax(260px,1fr);gap:16px}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.stagewrap{position:relative;border:3px solid var(--ink);background:#55656c;line-height:0}
+canvas{width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-edges;display:block}
+.tag{position:absolute;transform:translateX(-50%);line-height:1.2;font-size:clamp(9px,1.15vw,13px);
+  background:rgba(29,42,58,.86);color:#fff;padding:2px 6px;white-space:nowrap;pointer-events:none}
+.tag b{font-weight:400;margin-left:4px}
+.tag.working b{color:#ffd27a}.tag.done b{color:#8ff0bf}.tag.blocked b{color:#ffaba3}.tag.review b{color:#b9c6ff}.tag.waiting b,.tag.idle b{color:#c4ced4}
+.bubble{position:absolute;transform:translate(-50%,-100%);max-width:31%;line-height:1.25;
+  font-size:clamp(9px,1.1vw,12.5px);background:#fffef8;color:#1d2a3a;border:2px solid #1d2a3a;padding:3px 7px;pointer-events:none}
+.bubble::after{content:"";position:absolute;left:50%;bottom:-7px;width:8px;height:8px;background:#fffef8;
+  border-right:2px solid #1d2a3a;border-bottom:2px solid #1d2a3a;transform:translateX(-50%) rotate(45deg)}
+@media (max-width:560px){.bubble{display:none}}
+.pipe{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(8,1fr);gap:4px;counter-reset:s}
+.pipe li{border-top:5px solid var(--line);padding-top:6px;font-size:13px;color:var(--sub);line-height:1.3}
+.pipe li span{display:block;font-family:var(--display);font-size:17px;color:var(--ink)}
+.pipe li.done{border-color:var(--done)} .pipe li.now{border-color:var(--working)} .pipe li.now span{color:var(--working)}
+@media (max-width:560px){.pipe li{font-size:11px}.pipe li span{font-size:14px}}
+aside{display:flex;flex-direction:column;gap:16px;min-width:0}
+section{background:var(--panel);border:1px solid var(--line);padding:14px 16px}
+h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 8px}
+.roster{list-style:none;margin:0;padding:0}
+.roster li{display:grid;grid-template-columns:12px 1fr auto;gap:2px 10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line)}
+.roster li:last-child{border-bottom:0}
+.dot{width:10px;height:10px;align-self:center}
+.roster .st{font-size:13px;color:var(--sub)}
+.roster .dt{grid-column:2/4;font-size:13px;color:var(--sub);min-height:1em}
+.s-working{color:var(--working)!important}.s-done{color:var(--done)!important}.s-blocked{color:var(--blocked)!important}.s-review{color:var(--review)!important}
+.log{list-style:none;margin:0;padding:0;max-height:320px;overflow-y:auto;font-size:14px}
+.log li{padding:6px 0;border-bottom:1px solid var(--line)}
+.log time{color:var(--sub);font-size:12px;margin-right:6px}
+.log .who{font-weight:700;margin-right:4px}
+.help{font-size:13px;color:var(--sub);margin-top:12px}
+.help code{background:var(--panel);border:1px solid var(--line);padding:1px 5px;font-size:12px}
+@media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1 id="task">블로그 편집국</h1>
+      <p class="stageline" id="stageline">상태 파일을 찾는 중이에요</p>
+    </div>
+    <div class="conn" id="conn"><i></i><span>연결 확인 중</span></div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="stagewrap" id="stagewrap">
+        <canvas id="office" width="320" height="180" aria-label="에이전트들이 일하는 사무실 애니메이션"></canvas>
+      </div>
+      <ol class="pipe" id="pipe"></ol>
+    </div>
+    <aside>
+      <section>
+        <h2>지금 누가 뭘 하나요</h2>
+        <ul class="roster" id="roster"></ul>
+      </section>
+      <section>
+        <h2>작업 기록</h2>
+        <ul class="log" id="log"></ul>
+      </section>
+    </aside>
+  </div>
+  <p class="help" id="help"></p>
+</div>
+
+<script>
+(() => {
+'use strict';
+const W = 320, H = 180;
+const cv = document.getElementById('office');
+const ctx = cv.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- 등장인물 ----------
+const AGENTS = {
+  lead:     {name:'팀장',        role:'오케스트레이터',      hair:'#2a2a2e', shirt:'#2f4f7a', skin:'#f0c8a2'},
+  research: {name:'리서처',      role:'키워드 리서치',       hair:'#6b3e1f', shirt:'#c2405a', skin:'#f3cfae', desk:[26,70]},
+  writer:   {name:'작가',        role:'초안·수정',           hair:'#1f1f24', shirt:'#e3a72f', skin:'#e8b88f', desk:[106,70]},
+  seo:      {name:'SEO·AEO 검토', role:'구조·점수 검토',     hair:'#a35d2c', shirt:'#2f8f8a', skin:'#f3cfae', desk:[26,124]},
+  fact:     {name:'팩트체커',    role:'사실 검증',           hair:'#3b3b46', shirt:'#6c4fb3', skin:'#d9a37c', desk:[106,124]},
+  lint:     {name:'검사 로봇',   role:'check_article.py',   robot:true, desk:[186,124]},
+  design:   {name:'디자이너',    role:'썸네일·인포그래픽',   hair:'#2a2a2e', shirt:'#e07a5f', skin:'#f0c8a2', desk:[186,70]},
+  human:    {name:'나 (편집장)', role:'최종 승인',           hair:'#4a2f22', shirt:'#4b6cf0', skin:'#f0c8a2', desk:[256,96]},
+};
+const ORDER = ['lead','research','writer','seo','fact','lint','design','human'];
+const STATE_KO = {idle:'대기', working:'작업 중', waiting:'결과 기다림', done:'완료', blocked:'막힘', review:'확인 필요'};
+const STATE_COLOR = {idle:'#8a9aa6', working:'#e0a020', waiting:'#8a9aa6', done:'#2f9566', blocked:'#d24b40', review:'#4b6cf0'};
+const STAGES = [
+  {id:'0', no:'0', label:'입력 확인'},
+  {id:'1', no:'1', label:'리서치'},
+  {id:'A', no:'A', label:'아웃라인 확인'},
+  {id:'2', no:'2', label:'초안 작성'},
+  {id:'3', no:'3', label:'병렬 검토'},
+  {id:'4', no:'4', label:'수정'},
+  {id:'5', no:'5', label:'이미지 제작'},
+  {id:'B', no:'B', label:'최종 승인'},
+];
+
+let S = blankState();
+function blankState(){
+  const agents = {}; ORDER.forEach(a => agents[a] = {state:'idle', detail:''});
+  return {task:'블로그 편집국', stage:'0', round:0, finished:false, seq:0, agents, log:[]};
+}
+
+// ---------- 그리기 도구 ----------
+function r(x,y,w,h,c){ ctx.fillStyle=c; ctx.fillRect(Math.round(x),Math.round(y),w,h); }
+function deskAnchor(a){ const d=AGENTS[a].desk; return d ? [d[0]+16, d[1]-2] : [160,60]; }
+
+function drawRoom(t){
+  // 벽
+  r(0,0,W,40,'#cfe2db'); r(0,36,W,4,'#9dbdb2'); r(0,40,W,2,'#7f9d93');
+  // 창문
+  r(12,8,44,24,'#5b7d78'); r(14,10,40,20,'#a9dcf0');
+  const cloud = (t/120)%60;
+  r(14+((cloud)%40),14,8,3,'#ffffff'); r(16+((cloud+20)%36),22,6,2,'#ffffff');
+  r(33,10,2,20,'#5b7d78'); r(14,19,40,2,'#5b7d78');
+  // 화이트보드: 단계 진행
+  r(118,6,86,28,'#6f7c84'); r(120,8,82,24,'#fbfdfc');
+  const cur = STAGES.findIndex(s => s.id === S.stage);
+  STAGES.forEach((s,i)=>{
+    let c = '#d5dde0';
+    if (S.finished || i < cur) c = '#2f9566';
+    else if (i === cur) c = (Math.floor(t/400)%2 || reduceMotion) ? '#e0a020' : '#f4d488';
+    r(123+i*10,13,7,6,c);
+  });
+  r(124,23,40,1,'#9aa7b0'); r(124,26,56,1,'#9aa7b0'); r(166,23,20,1,'#c2405a');
+  r(150,32,22,2,'#6f7c84'); // 펜 받침
+  // 시계
+  r(224,10,16,16,'#3a4650'); r(226,12,12,12,'#f7f7f2');
+  const ang = (t/1000)%60/60*Math.PI*2;
+  r(231,17,2,2,'#3a4650');
+  r(232+Math.round(Math.sin(ang)*4)-0, 18-Math.round(Math.cos(ang)*4), 1,1,'#c2405a');
+  // 바닥 카펫 타일
+  for(let y=42;y<H;y+=12) for(let x=0;x<W;x+=12){
+    r(x,y,12,12, ((x+y)/12)%2 ? '#6c7c83' : '#677780');
+  }
+  // 화분
+  r(4,150,12,14,'#8a5a33'); r(2,138,6,12,'#3f8f5a'); r(8,132,6,18,'#4fa56b'); r(12,140,6,10,'#3f8f5a');
+  // 정수기
+  r(222,48,10,22,'#dfe7ea'); r(223,40,8,9,'#8fd0ee'); r(224,58,3,2,'#4b6cf0');
+}
+
+function drawGlassRoom(t){
+  // 편집장실 (유리 벽)
+  ctx.globalAlpha = .22; r(236,44,84,136,'#c7ecff'); ctx.globalAlpha = 1;
+  r(236,44,84,2,'#3a4650'); r(236,44,2,40,'#3a4650'); r(236,112,2,68,'#3a4650');
+  ctx.globalAlpha = .5; r(240,60,2,20,'#ffffff'); r(244,60,1,14,'#ffffff'); ctx.globalAlpha = 1;
+  // 명패
+  r(282,50,26,6,'#3a4650'); r(284,52,22,2,'#e0c27a');
+}
+
+function drawDesk(x,y,state,t,isHuman){
+  // 책상
+  r(x,y,32,4, isHuman ? '#8a5a33' : '#b37c4b'); r(x,y+4,32,9, isHuman ? '#6c4426' : '#8f5e36');
+  r(x+2,y+13,2,4,'#5a3a22'); r(x+28,y+13,2,4,'#5a3a22');
+  // 모니터
+  let scr = '#34414c';
+  if (state==='working') scr = '#7fd1c7';
+  else if (state==='done') scr = '#8fe0a8';
+  else if (state==='blocked') scr = (Math.floor(t/300)%2) ? '#ef8a80' : '#d24b40';
+  else if (state==='review') scr = '#b9c6ff';
+  else if (state==='waiting') scr = '#5d7380';
+  r(x+19,y-11,12,10,'#2a333c'); r(x+20,y-10,10,7,scr); r(x+24,y-1,2,2,'#2a333c');
+  if (state==='working'){
+    const off = Math.floor(t/140)%4;
+    for(let i=0;i<3;i++){ const ly = y-9 + ((i*2+off)%6); r(x+21,ly,3+((i+off)%3)*2,1,'#2b6d66'); }
+  }
+  // 키보드·서류
+  r(x+5,y+1,10,2,'#d9dee2');
+  if (state==='waiting'){ // 커피
+    r(x+16,y,3,3,'#f2f2f2'); r(x+17,y,1,1,'#5a3a22');
+    if (!reduceMotion){ const s=Math.floor(t/300)%3; r(x+17,y-2-s,1,1,'#e8eef0'); }
+  }
+}
+
+function drawChair(x,y){ r(x+4,y-16,12,13,'#33404a'); r(x+5,y-15,10,4,'#44525c'); }
+function drawArms(cx,y,a,state,t){
+  const A = AGENTS[a];
+  if (state==='working'){
+    const k = reduceMotion ? 0 : Math.floor(t/120)%2;
+    r(cx-4,y-k,2,2,A.skin); r(cx+2,y-1+k,2,2,A.skin);
+  } else if (state!=='waiting'){
+    r(cx-6,y-1,2,2,A.skin); r(cx+4,y-1,2,2,A.skin);
+  }
+}
+function drawPerson(cx,top,a,state,t){
+  const A = AGENTS[a];
+  const bob = (state==='waiting' && !reduceMotion) ? (Math.floor(t/700)%2) : 0;
+  // 몸
+  r(cx-5,top+7+bob,10,11-bob,A.shirt); r(cx-1,top+7+bob,2,2,'#f5f5f5');
+  // 머리
+  r(cx-3,top+bob,6,7,A.skin);
+  r(cx-3,top-1+bob,6,2,A.hair); r(cx-3,top+bob,1,3,A.hair); r(cx+2,top+bob,1,3,A.hair);
+  r(cx-2,top+3+bob,1,1,'#1d2a3a'); r(cx+1,top+3+bob,1,1,'#1d2a3a');
+  if (state==='done') r(cx-1,top+5+bob,2,1,'#a8553f');
+  if (state==='waiting'){ r(cx-6,top+10+bob,2,5,A.shirt); r(cx+4,top+10+bob,2,5,A.shirt); }
+}
+
+function drawRobot(x,y,state,t){
+  // 프린터 겸 검사 로봇
+  r(x,y,32,4,'#9aa7b0'); r(x,y+4,32,9,'#7b8892'); r(x+2,y+13,2,4,'#59656e'); r(x+28,y+13,2,4,'#59656e');
+  const by = y-15;
+  r(x+6,by,16,14,'#b9c4cb'); r(x+8,by+2,12,6,'#2a333c');
+  let eye = '#5d7380';
+  if (state==='working') eye = (Math.floor(t/200)%2) ? '#7fd1c7' : '#3fae9f';
+  else if (state==='done') eye = '#8fe0a8';
+  else if (state==='blocked') eye = '#ef8a80';
+  r(x+10,by+4,3,2,eye); r(x+15,by+4,3,2,eye);
+  r(x+13,by-4,2,4,'#59656e'); r(x+12,by-6,4,2, state==='working' ? '#e0a020' : '#8a9aa6');
+  // 출력 종이
+  if (state==='working' && !reduceMotion){
+    const h = Math.floor(t/150)%6;
+    r(x+9,by+14,10,h,'#ffffff');
+  }
+}
+
+function drawBadge(x,y,state,t){
+  if (state==='done'){ r(x-3,y-3,7,6,'#2f9566'); r(x-2,y,1,1,'#fff'); r(x-1,y+1,1,1,'#fff'); r(x,y,1,1,'#fff'); r(x+1,y-1,1,1,'#fff'); r(x+2,y-2,1,1,'#fff'); }
+  else if (state==='blocked'){ if (Math.floor(t/350)%2 || reduceMotion){ r(x-2,y-4,5,8,'#d24b40'); r(x,y-3,1,4,'#fff'); r(x,y+2,1,1,'#fff'); } }
+  else if (state==='review'){ const j = reduceMotion?0:Math.floor(t/250)%2; r(x-3,y-4+j,7,7,'#4b6cf0'); r(x-1,y-3+j,3,4,'#ffd27a'); r(x,y+1+j,1,1,'#ffd27a'); }
+  else if (state==='working'){ const k = reduceMotion?0:Math.floor(t/300)%3; for(let i=0;i<3;i++) r(x-3+i*3,y, 2,2, i===k?'#e0a020':'#f4d488'); }
+}
+
+// ---------- 팀장 (걸어 다님) ----------
+const lead = {x:160, y:54, tx:160, ty:54, walking:false, face:1};
+const STAND = {research:[64,72], writer:[144,72], design:[176,72], seo:[64,126], fact:[144,126], lint:[224,126], human:[226,100], board:[160,54]};
+function leadTarget(){
+  const pri = ['writer','research','design','fact','seo','lint'];
+  if (S.agents.human && S.agents.human.state==='review') return STAND.human;
+  const blocked = pri.find(a => S.agents[a] && S.agents[a].state==='blocked');
+  if (blocked) return STAND[blocked];
+  const busy = pri.filter(a => S.agents[a] && S.agents[a].state==='working');
+  if (busy.length===1) return STAND[busy[0]];
+  if (busy.length>1){ // 병렬 작업이면 돌아가며 순회
+    const k = Math.floor(performance.now()/6000)%busy.length; return STAND[busy[k]];
+  }
+  return STAND.board;
+}
+function stepLead(dt){
+  [lead.tx, lead.ty] = leadTarget();
+  const dx = lead.tx-lead.x, dy = lead.ty-lead.y, d = Math.hypot(dx,dy);
+  const sp = 42*dt;
+  if (d < 1){ lead.walking=false; lead.x=lead.tx; lead.y=lead.ty; return; }
+  lead.walking = true; lead.face = dx>=0 ? 1 : -1;
+  // 먼저 가로, 그다음 세로 (복도 느낌)
+  if (Math.abs(dy) > 1 && Math.abs(lead.y-100) > 2 && Math.abs(dx) > 1){
+    lead.y += Math.sign(100-lead.y)*Math.min(sp,Math.abs(100-lead.y));
+  } else if (Math.abs(dx) > 1){
+    lead.x += Math.sign(dx)*Math.min(sp,Math.abs(dx));
+  } else {
+    lead.y += Math.sign(dy)*Math.min(sp,Math.abs(dy));
+  }
+}
+function drawLead(t){
+  const A = AGENTS.lead, cx = lead.x, top = lead.y-18;
+  r(cx-4,top+21,8,2,'rgba(0,0,0,.18)');
+  const step = (lead.walking && !reduceMotion) ? Math.floor(t/140)%2 : 0;
+  r(cx-3,top+15,2,5-step,'#2a333c'); r(cx+1,top+15,2,4+step,'#2a333c');
+  r(cx-4,top+7,8,9,A.shirt); r(cx-1,top+7,2,5,'#d9dee2');
+  r(cx-3,top,6,7,A.skin); r(cx-3,top-1,6,2,A.hair);
+  r(cx-2+(lead.face>0?1:0),top+3,1,1,'#1d2a3a'); r(cx+1+(lead.face>0?0:-1),top+3,1,1,'#1d2a3a');
+  // 클립보드
+  r(cx+(lead.face>0?3:-6),top+9,3,5,'#d9c08a');
+}
+
+// ---------- 서류 전달 애니메이션 ----------
+const papers = [];
+function sendPaper(from,to){
+  if (!AGENTS[from] || !AGENTS[to]) return;
+  const [x0,y0] = deskAnchor(from), [x1,y1] = deskAnchor(to);
+  papers.push({x0,y0,x1,y1,t0:performance.now(),dur: reduceMotion ? 1 : 1400+Math.hypot(x1-x0,y1-y0)*4, arrived:false, to});
+}
+function drawPapers(now){
+  for (let i=papers.length-1;i>=0;i--){
+    const p = papers[i]; const k = Math.min(1,(now-p.t0)/p.dur);
+    const e = k<.5 ? 2*k*k : 1-Math.pow(-2*k+2,2)/2;
+    const x = p.x0+(p.x1-p.x0)*e, y = p.y0+(p.y1-p.y0)*e - Math.sin(Math.PI*k)*24;
+    r(x-3,y-4,6,8,'#ffffff'); r(x-2,y-2,4,1,'#9aa7b0'); r(x-2,y,4,1,'#9aa7b0'); r(x-2,y+2,3,1,'#9aa7b0');
+    if (k>=1){
+      if (!p.arrived){ p.arrived = true; p.tArr = now; }
+      const f = (now-p.tArr)/400;
+      if (f>1) papers.splice(i,1);
+      else { ctx.globalAlpha = 1-f; r(p.x1-6,p.y1-7,12,12,'#fff6c2'); ctx.globalAlpha = 1; }
+    }
+  }
+}
+
+// ---------- 메인 루프 ----------
+let last = performance.now();
+function frame(now){
+  const dt = Math.min(.05,(now-last)/1000); last = now;
+  const t = now;
+  ctx.clearRect(0,0,W,H);
+  drawRoom(t);
+  drawGlassRoom(t);
+  ['research','writer','design','seo','fact','human'].forEach(a=>{
+    const [x,y] = AGENTS[a].desk; const st = (S.agents[a]||{}).state || 'idle';
+    drawChair(x,y);
+    drawPerson(x+10,y-18,a,st,t);
+    drawDesk(x,y,st,t,a==='human');
+    drawArms(x+10,y,a,st,t);
+    drawBadge(x+10,y-24,st,t);
+  });
+  const lst = (S.agents.lint||{}).state || 'idle';
+  drawRobot(AGENTS.lint.desk[0],AGENTS.lint.desk[1],lst,t);
+  drawBadge(AGENTS.lint.desk[0]+14,AGENTS.lint.desk[1]-26,lst,t);
+  stepLead(dt); drawLead(t);
+  drawPapers(now);
+  placeOverlays();
+  requestAnimationFrame(frame);
+}
+
+// ---------- HTML 오버레이 (이름표·말풍선) ----------
+const wrap = document.getElementById('stagewrap');
+const overlays = {};
+ORDER.forEach(a=>{
+  if (a==='lead') return;
+  const tag = document.createElement('div'); tag.className='tag'; wrap.appendChild(tag);
+  const bub = document.createElement('div'); bub.className='bubble'; bub.hidden = true; wrap.appendChild(bub);
+  overlays[a] = {tag,bub};
+});
+const leadBub = document.createElement('div'); leadBub.className='bubble'; leadBub.hidden = true; wrap.appendChild(leadBub);
+function pct(v,max){ return (v/max*100)+'%'; }
+let lastOverlayKey = '';
+function placeOverlays(){
+  const key = JSON.stringify(S.agents)+Math.round(lead.x)+','+Math.round(lead.y);
+  if (key===lastOverlayKey) return; lastOverlayKey = key;
+  for (const a in overlays){
+    const [x,y] = AGENTS[a].desk; const ag = S.agents[a] || {state:'idle',detail:''};
+    const {tag,bub} = overlays[a];
+    tag.className = 'tag '+ag.state;
+    tag.style.left = pct(x+16,W); tag.style.top = pct(y+18,H);
+    tag.innerHTML = '';
+    tag.append(AGENTS[a].name); const b = document.createElement('b'); b.textContent = STATE_KO[ag.state]||ag.state; tag.append(b);
+    const show = ['working','blocked','review'].includes(ag.state) && ag.detail;
+    bub.hidden = !show;
+    if (show){ bub.textContent = ag.detail; bub.style.left = pct(x+12,W); bub.style.top = pct(y-30,H); }
+  }
+  const ld = S.agents.lead || {};
+  const showLead = ld.state==='working' && ld.detail;
+  leadBub.hidden = !showLead;
+  if (showLead){ leadBub.textContent = ld.detail; leadBub.style.left = pct(lead.x,W); leadBub.style.top = pct(lead.y-22,H); }
+}
+
+// ---------- 패널 ----------
+const $ = id => document.getElementById(id);
+function fmtTime(iso){ if(!iso) return ''; const m = String(iso).match(/T(\d\d:\d\d:\d\d)/); return m?m[1]:''; }
+function render(){
+  $('task').textContent = S.task || '블로그 편집국';
+  document.title = (S.task||'블로그 편집국')+' – 진행 상황';
+  const st = STAGES.find(s=>s.id===S.stage);
+  let line = S.finished ? '모든 단계를 마쳤어요. 발행은 직접 해 주세요.'
+    : st ? (/[AB]/.test(st.id) ? `승인 ${st.id}: ${st.label}` : `${st.no}단계: ${st.label}`) : '';
+  if (!S.finished && S.round && (S.stage==='3' || S.stage==='4')) line += `, ${S.round}라운드`;
+  $('stageline').textContent = line;
+
+  const cur = STAGES.findIndex(s=>s.id===S.stage);
+  $('pipe').innerHTML = '';
+  STAGES.forEach((s,i)=>{
+    const li = document.createElement('li');
+    li.className = (S.finished || i<cur) ? 'done' : i===cur ? 'now' : '';
+    const sp = document.createElement('span'); sp.textContent = s.no; li.append(sp, s.label);
+    if (i===cur && !S.finished) li.setAttribute('aria-current','step');
+    $('pipe').append(li);
+  });
+
+  $('roster').innerHTML = '';
+  ORDER.forEach(a=>{
+    const ag = S.agents[a] || {state:'idle',detail:''};
+    const li = document.createElement('li');
+    const dot = document.createElement('span'); dot.className='dot'; dot.style.background = STATE_COLOR[ag.state]||'#8a9aa6';
+    const nm = document.createElement('span'); nm.textContent = AGENTS[a].name;
+    const s = document.createElement('span'); s.className = 'st s-'+ag.state; s.textContent = STATE_KO[ag.state]||ag.state;
+    const dt = document.createElement('span'); dt.className='dt'; dt.textContent = ag.detail || AGENTS[a].role;
+    li.append(dot,nm,s,dt); $('roster').append(li);
+  });
+
+  $('log').innerHTML = '';
+  (S.log||[]).slice().reverse().forEach(e=>{
+    const li = document.createElement('li');
+    const tm = document.createElement('time'); tm.textContent = fmtTime(e.t);
+    const who = document.createElement('span'); who.className='who'; who.textContent = (AGENTS[e.agent]||{name:e.agent}).name;
+    let msg = e.msg || '';
+    if (e.kind==='handoff' && e.to) msg = '→ '+e.to.map(x=>(AGENTS[x]||{name:x}).name).join(', ')+': '+msg;
+    li.append(tm,who,msg); $('log').append(li);
+  });
+}
+
+function normalize(n){
+  const x = Object.assign(blankState(), JSON.parse(JSON.stringify(n)));
+  ORDER.forEach(a=>{ if(!x.agents[a]) x.agents[a] = {state:'idle',detail:''}; });
+  return x;
+}
+function maxSeqOf(n){ const q = (n.log||[]).map(e=>e.seq||0); return Math.max(n.seq||0, q.length ? Math.max(...q) : 0); }
+
+// 데모용: 스냅숏을 바로 반영
+let lastSeq = null;
+function apply(next){
+  const prevSeq = lastSeq;
+  S = normalize(next);
+  if (prevSeq !== null){
+    (S.log||[]).filter(e => (e.seq||0) > prevSeq && e.kind==='handoff' && e.to).forEach(e => e.to.forEach(to => sendPaper(e.agent,to)));
+  }
+  lastSeq = maxSeqOf(S);
+  render();
+}
+
+// 실시간용: 새 로그를 한 장면씩 순서대로 재생 (기록이 몰려 와도 중간 과정이 보이도록)
+const queue = []; let playing = false, snapshot = null;
+function ingestLive(next, replayAll){
+  snapshot = normalize(next);
+  const top = maxSeqOf(snapshot);
+  if (lastSeq !== null && top < lastSeq) replayAll = true; // 새 작업(init)으로 초기화됨
+  if (lastSeq === null && !replayAll){ // 이미 진행 중인 작업을 처음 연 경우: 현재 상태부터
+    S = normalize(next); lastSeq = top; render(); return;
+  }
+  if (replayAll){
+    queue.length = 0; lastSeq = 0;
+    S = blankState(); S.task = snapshot.task; S.log = [];
+  }
+  const fresh = (snapshot.log||[]).filter(e => (e.seq||0) > lastSeq).sort((x,y)=>x.seq-y.seq);
+  if (fresh.length){ queue.push(...fresh); lastSeq = top; }
+  S.task = snapshot.task;
+  if (!playing) playNext();
+}
+function playNext(){
+  if (!queue.length){
+    playing = false;
+    if (snapshot){ const lg = S.log; S = normalize(snapshot); S.log = lg; render(); } // 최종 상태와 맞춤
+    return;
+  }
+  playing = true;
+  const e = queue.shift();
+  playEvent(e);
+  let wait = e.kind==='handoff' ? 1800 : e.kind==='stage' ? 900 : e.kind==='state' ? 1400 : 700;
+  if (queue.length > 15) wait /= 3; else if (queue.length > 6) wait /= 1.7;
+  if (reduceMotion) wait = Math.min(wait, 500);
+  setTimeout(playNext, wait);
+}
+function playEvent(e){
+  S.log = (S.log||[]).concat([e]).slice(-80);
+  if (e.kind==='state' && e.state && S.agents[e.agent]) S.agents[e.agent] = {state:e.state, detail: e.msg||''};
+  else if (e.kind==='stage'){ if (e.stage) S.stage = e.stage; if (e.round != null) S.round = e.round; }
+  else if (e.kind==='finish'){ S.finished = true; ORDER.forEach(a=>{ if(['working','waiting','review','blocked'].includes(S.agents[a].state)) S.agents[a].state='done'; }); }
+  else if (e.kind==='handoff' && e.to) e.to.forEach(t => sendPaper(e.agent, t));
+  render();
+}
+
+// ---------- 실시간 연결 / 데모 ----------
+// status.js(스크립트)를 1초마다 다시 불러온다. 스크립트 태그는 file://에서도 동작하므로 서버가 필요 없다.
+let mode = 'connecting', demoTimer = null, failCount = 0, everLoaded = false, plainSrc = false, lastRaw = '', pushActive = false;
+function setConn(m){
+  mode = m; const c = $('conn');
+  c.className = 'conn '+m;
+  c.querySelector('span').textContent = {live:'실시간 연결됨', demo:'데모 재생 중', lost:'연결 끊김, 마지막 상태 표시 중', connecting:'연결 확인 중'}[m];
+  $('help').innerHTML = m!=='demo' ? '' : window.__HARNESS_NO_POLL
+    ? '하네스가 다음 단계를 기록하면 자동으로 실제 진행 상황으로 바뀌어요.'
+    : '이 폴더에서 아직 <code>status.js</code>를 찾지 못해 데모를 보여 주고 있어요. 하네스가 시작되면 자동으로 실제 진행 상황으로 바뀌어요.';
+}
+function loadStatus(){
+  return new Promise(resolve => {
+    const el = document.createElement('script');
+    el.src = plainSrc ? 'status.js' : 'status.js?t='+Date.now();
+    el.onload = () => { el.remove(); resolve(window.__HARNESS_STATUS || null); };
+    el.onerror = () => { el.remove(); resolve(null); };
+    document.head.appendChild(el);
+  });
+}
+async function poll(){
+  // 내장 브라우저에 코드로 넣은 경우(open-js): 파일이 없으니 읽지 않고, Claude의 직접 전달만 기다린다
+  if (window.__HARNESS_NO_POLL){ if (mode==='connecting') startDemo(); return; }
+  window.__HARNESS_STATUS = null;
+  let j = await loadStatus();
+  if (!j && !everLoaded && !plainSrc){ // 일부 브라우저는 file:// 주소의 ?t= 를 싫어함
+    plainSrc = true; j = await loadStatus(); if (!j) plainSrc = false;
+  }
+  if (pushActive && (!j || maxSeqOf(j) < (lastSeq || 0))){ // 직접 전달 중: 오래된 파일은 무시
+    setTimeout(poll, 1000); return;
+  }
+  if (j){
+    failCount = 0; everLoaded = true;
+    let replayAll = false;
+    if (mode==='demo'){ stopDemo(); lastSeq = null; lastRaw = ''; replayAll = true; } // 지켜보던 중이면 처음부터 재생
+    if (mode!=='live') setConn('live');
+    const raw = JSON.stringify(j);
+    if (raw !== lastRaw){ lastRaw = raw; ingestLive(j, replayAll); }
+    const up = fmtTime(j.updated);
+    if (up) $('conn').querySelector('span').textContent = '연결됨, 마지막 기록 ' + up;
+  } else {
+    failCount++;
+    if (mode==='live' && failCount>2) setConn('lost');
+    else if (mode==='connecting') startDemo();
+  }
+  setTimeout(poll, mode==='demo' ? 2000 : 1000);
+}
+
+// 내장 브라우저 등에서 status.js를 읽지 못할 때: 오케스트레이터가 javascript_tool로 상태를 직접 넣는다
+//   python3 status.py --dir <작업 폴더> push-js  → 출력된 한 줄을 그대로 실행
+window.__harnessPush = function(obj){
+  try {
+    let replayAll = false;
+    if (mode==='demo'){ stopDemo(); lastSeq = null; lastRaw = ''; replayAll = true; }
+    pushActive = true; failCount = 0; everLoaded = true;
+    if (mode!=='live') setConn('live');
+    const raw = JSON.stringify(obj);
+    if (raw !== lastRaw){ lastRaw = raw; ingestLive(obj, replayAll); }
+    $('conn').querySelector('span').textContent = '연결됨(직접 전달), 마지막 기록 ' + fmtTime(obj.updated);
+    return 'ok seq=' + maxSeqOf(obj);
+  } catch(e){ return 'error: ' + e; }
+};
+function startDemo(){
+  setConn('demo');
+  const D = blankState(); D.task = '데모: 초보자를 위한 AI 글쓰기 도구 비교'; D.log = []; let seq = 0;
+  const now = () => new Date().toISOString().slice(0,19);
+  const L = (agent,msg,kind,to) => { seq++; D.log.push({seq,t:now(),agent,msg,kind:kind||'log',to}); D.log = D.log.slice(-60); };
+  const set = (a,s,d) => { D.agents[a] = {state:s, detail:d||''}; if (d) L(a,d,'state'); };
+  const stage = (s,rd) => { D.stage = s; if (rd!==undefined) D.round = rd; L('lead', (/[AB]/.test(s)?'승인 '+s:s+'단계')+'로 이동','stage'); };
+  const hand = (a,to,m) => L(a,m,'handoff',to);
+  const steps = [
+    [0,   ()=>{ L('lead','작업 시작'); stage('0'); set('lead','working','입력 카드 정리 중'); }],
+    [2500,()=>{ set('lead','idle',''); stage('1'); set('research','working','검색의도 유형 분류 중'); }],
+    [3500,()=>{ set('research','working','상위 노출 글 10개 구조 분석'); }],
+    [3500,()=>{ set('research','done','리서치 브리프 완성'); hand('research',['writer'],'리서치 브리프'); stage('2'); }],
+    [1500,()=>{ set('writer','working','초안 v1: 도입부와 H2 작성 중'); }],
+    [4000,()=>{ set('writer','working','FAQ 5개와 JSON-LD 작성 중'); }],
+    [3500,()=>{ set('writer','waiting','검토 결과 기다리는 중'); hand('writer',['seo','fact','lint'],'초안 v1'); stage('3',1); }],
+    [1500,()=>{ set('seo','working','제목·메타설명 점검'); set('fact','working','문장별 출처 대조 중'); set('lint','working','기계 점검 실행'); }],
+    [3000,()=>{ set('lint','done','PASS 18, WARN 2, FAIL 0'); hand('lint',['writer'],'기계 점검 결과'); }],
+    [2500,()=>{ set('fact','blocked','가격 주장 1건 근거 없음'); }],
+    [2500,()=>{ set('seo','done','82점, 수정지시 4건'); hand('seo',['writer'],'SEO·AEO 검토표'); }],
+    [1500,()=>{ set('fact','done','근거 없음 1건 삭제 지시'); hand('fact',['writer'],'사실검증표'); stage('4',1); set('writer','working','수정 1라운드 반영 중'); }],
+    [4500,()=>{ set('writer','done','최종 원고 확정'); hand('writer',['design'],'확정 원고'); stage('5'); set('design','working','썸네일: 캐릭터·말풍선 배치'); }],
+    [3500,()=>{ set('design','working','인포그래픽 2장 렌더·겹침 점검'); }],
+    [3500,()=>{ set('design','done','이미지 3장 완성'); hand('design',['human'],'기사 패키지 + 이미지'); stage('B'); }],
+    [1500,()=>{ set('human','review','발행 전 최종 확인 필요'); }],
+    [7000,()=>{ set('human','done','승인'); D.finished = true; L('lead','사람 승인 완료','stage'); }],
+    [6000,()=>{ startDemo(); }],
+  ];
+  stopDemo(); lastSeq = null;
+  let i = 0;
+  const run = () => {
+    if (mode!=='demo') return;
+    steps[i][1](); apply(JSON.parse(JSON.stringify(D)));
+    i++; if (i < steps.length) demoTimer = setTimeout(run, steps[i][0]);
+  };
+  run();
+}
+function stopDemo(){ if (demoTimer) clearTimeout(demoTimer); demoTimer = null; }
+
+render();
+requestAnimationFrame(frame);
+poll();
+})();
+</script>
+</body>
+</html>

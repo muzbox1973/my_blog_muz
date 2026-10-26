@@ -1,0 +1,21 @@
+[FAIL] VISUALS_FILE: 이미지 파일 없음: visuals/thumbnail.webp
+[WARN] TEMP_MARKERS: 임시 표식 남음: [근거#n]×8, [경험 보강 필요]×1
+[PASS] FORMAT: 필수 섹션 모두 존재
+[PASS] TITLE_LEN: 추천 제목 34자 (권장 25~40)
+[PASS] TITLE_KW: 핵심 키워드가 제목 앞쪽에 있음
+[PASS] META_LEN: 메타설명 102자 (권장 80~120)
+[PASS] SLUG: 슬러그 형식 적합: team-leader-situational-prompts
+[PASS] ANSWER_FIRST_LEN: 도입 단락 143자
+[PASS] KW_FIRST100: 핵심 키워드가 도입 100자 안에 있음
+[PASS] H2_COUNT: 본문 H2 8개
+[PASS] H2_QUESTION: 질문형 H2 비율 100% (권장 50%↑)
+[PASS] STRUCTURE: 목록 3개, 표 1개 (합 2개↑ 권장)
+[PASS] DATE: 최종 수정일 표시
+[PASS] STUFFING: 핵심 키워드 7회, 밀도 1.5%
+[PASS] SUB_KW: 보조 키워드 6/6개 본문 등장
+[PASS] FAQ_COUNT: FAQ 4개
+[PASS] JSONLD_FIELDS: BlogPosting 필수 필드 충족
+[PASS] JSONLD_FAQ_MATCH: FAQPage 질문이 본문 FAQ와 일치
+[PASS] TAGS: 태그 9개 (권장 5~10)
+
+요약: FAIL 1 / WARN 1 / PASS 17 → 수정 필요

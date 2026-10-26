@@ -1,0 +1,85 @@
+{
+ "seed": "535ad29f",
+ "style": {
+  "frame": "offset",
+  "frame_color": "#9a5b13",
+  "frame_inset": 8,
+  "line": "#9a5b13",
+  "card_bw": 4,
+  "card_bs": "dashed",
+  "card_radius": 34,
+  "card_shadow": "offset",
+  "shadow_color": "#9fd3b0"
+ },
+ "images": {
+  "steps-1": {
+   "type": "steps",
+   "file": "visuals/steps-1.webp",
+   "alt": "상황별 프롬프트 네 칸 공식 — 역할(누구처럼), 작업(무엇을), 맥락(왜·누가 읽나), 형식(어떤 모양으로)",
+   "format": "landscape",
+   "stickers": [
+    {
+     "id": "tape-blue",
+     "scale": 0.81,
+     "kind": "tape"
+    },
+    {
+     "id": "arrow-curve-blue",
+     "scale": 0.51,
+     "kind": "arrow"
+    },
+    {
+     "id": "tape-blue",
+     "scale": 0.69,
+     "kind": "tape"
+    },
+    {
+     "id": "arrow-curve-blue",
+     "scale": 0.6,
+     "kind": "arrow"
+    },
+    {
+     "id": "tape-yellow",
+     "scale": 0.55,
+     "kind": "tape"
+    },
+    {
+     "id": "arrow-curve-blue",
+     "scale": 0.55,
+     "kind": "arrow"
+    },
+    {
+     "id": "tape-yellow",
+     "scale": 0.51,
+     "kind": "tape"
+    },
+    {
+     "id": "char-explain",
+     "scale": 1.44,
+     "kind": "character"
+    }
+   ],
+   "size": [
+    1280,
+    720
+   ],
+   "layout": {
+    "side": "left",
+    "variant": 0,
+    "attempts": 1
+   }
+  }
+ },
+ "checks": [
+  {
+   "level": "PASS",
+   "image": "steps-1",
+   "code": "WEBP",
+   "msg": "WebP 변환 266KB → 67KB (품질 90)"
+  }
+ ],
+ "summary": {
+  "FAIL": 0,
+  "WARN": 0
+ }
+}
