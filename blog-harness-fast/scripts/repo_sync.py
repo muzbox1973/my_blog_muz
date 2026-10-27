@@ -25,6 +25,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from _local_paths import contained_path
 
 TEMPLATES = {
     "jsdelivr": "https://cdn.jsdelivr.net/gh/{owner}/{repo}@{ref}/{path}",
@@ -41,7 +42,7 @@ def git(repo, *args, check=True):
 
 
 def load_cfg(top, base):
-    p = os.path.join(top, base, "harness.json")
+    p = contained_path(contained_path(top, base), "harness.json")
     if not os.path.exists(p):
         raise SystemExit(f"[sync] {p} 없음 — 먼저 repo_setup.py 실행")
     return json.load(open(p, encoding="utf-8"))
@@ -103,12 +104,25 @@ def main():
         print(git(top, "status", "--short", "--", a.base).stdout or "(변경 없음)")
         print(f"브랜치 {branch}, 최근 커밋 {git(top, 'rev-parse', '--short', 'HEAD', check=False).stdout.strip()}")
         return
-    post_dir = os.path.join(top, a.base, "posts", a.post)
+    if not cfg.get("target_confirmed") or not cfg.get("remote_url") or cfg.get("base") != a.base:
+        raise SystemExit("[sync] 저장소 URL·브랜치·경로를 먼저 질문하고 repo_setup으로 기록하세요")
+    actual_remote = git(top, "remote", "get-url", "origin").stdout.strip()
+    normalize = lambda value: value.rstrip('/').removesuffix('.git')
+    if normalize(actual_remote) != normalize(cfg["remote_url"]):
+        raise SystemExit("[sync] 저장소 주소가 확인한 대상과 달라 중단합니다")
+    if git(top, "symbolic-ref", "--short", "HEAD", check=False).stdout.strip() != branch:
+        raise SystemExit("[sync] 확인한 브랜치와 현재 브랜치가 달라 중단합니다")
+    base_dir = contained_path(top, a.base)
+    post_dir = contained_path(os.path.join(base_dir, "posts"), a.post)
     if not os.path.isdir(post_dir):
         raise SystemExit(f"[sync] 글 폴더 없음: {post_dir}")
 
     pushed = None
     if a.cmd == "publish":
+        # A bare git commit also includes previously staged unrelated changes.
+        staged = git(top, "diff", "--cached", "--name-only", "-z").stdout
+        if staged:
+            raise SystemExit("[sync] 이미 스테이징된 변경이 있어 중단합니다. 기존 변경을 먼저 정리하세요.")
         git(top, "add", "--", a.base)
         if git(top, "diff", "--cached", "--quiet", check=False).returncode == 0:
             print("[sync] 커밋할 변경 없음")
@@ -127,9 +141,6 @@ def main():
         else:
             r = git(top, "push", "origin", f"HEAD:{branch}", check=False)
             if r.returncode != 0:
-                git(top, "pull", "--rebase", "origin", branch, check=False)
-                r = git(top, "push", "origin", f"HEAD:{branch}", check=False)
-            if r.returncode != 0:
                 print(f"[sync] 푸시 실패: {(r.stderr or r.stdout).strip()[:300]}", file=sys.stderr)
                 print("[sync] 커밋은 로컬에 있음. 사람이 직접 푸시하거나 권한을 연결한 뒤 다시 publish", file=sys.stderr)
                 sys.exit(3)
@@ -139,9 +150,11 @@ def main():
     else:
         ref = a.ref or git(top, "rev-parse", "HEAD").stdout.strip()
 
-    if a.cmd == "publish" and a.keep_urls and os.path.exists(os.path.join(post_dir, "assets-urls.json")):
+    if a.cmd == "publish" and a.keep_urls and pushed is True and os.path.exists(os.path.join(post_dir, "assets-urls.json")):
         print(f"[sync] 이미지 주소는 그대로 유지 (assets-urls.json), 이번 커밋 {ref[:10]}")
         return
+    if pushed is False:
+        raise SystemExit("[sync] 로컬 커밋만 생성됨. 업로드 미완료 — 공개 이미지 주소를 확정하지 않습니다")
     files = build_urls(cfg, top, post_dir, ref)
     out = {"ref": ref, "pushed": pushed, "cdn": cfg.get("cdn"), "files": files}
     if files and not a.no_verify and pushed is not False:

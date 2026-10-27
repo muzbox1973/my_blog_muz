@@ -4,9 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>블로그 편집국 – 진행 상황</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&display=swap" rel="stylesheet">
+
+
+
 <style>
 :root{
   --bg:#e6ecea; --panel:#f7faf9; --ink:#1d2a3a; --sub:#55657a; --line:#c9d4d1;
@@ -43,7 +43,7 @@ canvas{width:100%;height:auto;image-rendering:pixelated;image-rendering:crisp-ed
 .bubble::after{content:"";position:absolute;left:50%;bottom:-7px;width:8px;height:8px;background:#fffef8;
   border-right:2px solid #1d2a3a;border-bottom:2px solid #1d2a3a;transform:translateX(-50%) rotate(45deg)}
 @media (max-width:560px){.bubble{display:none}}
-.pipe{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(8,1fr);gap:4px;counter-reset:s}
+.pipe{list-style:none;margin:14px 0 0;padding:0;display:grid;grid-template-columns:repeat(9,1fr);gap:4px;counter-reset:s}
 .pipe li{border-top:5px solid var(--line);padding-top:6px;font-size:13px;color:var(--sub);line-height:1.3}
 .pipe li span{display:block;font-family:var(--display);font-size:17px;color:var(--ink)}
 .pipe li.done{border-color:var(--done)} .pipe li.now{border-color:var(--working)} .pipe li.now span{color:var(--working)}
@@ -65,6 +65,17 @@ h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 8px}
 .help{font-size:13px;color:var(--sub);margin-top:12px}
 .help code{background:var(--panel);border:1px solid var(--line);padding:1px 5px;font-size:12px}
 @media (prefers-reduced-motion:reduce){*{scroll-behavior:auto}}
+
+.phases{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0 0 16px}
+.phase{background:var(--panel);border:2px solid var(--line);padding:12px;display:flex;gap:10px;align-items:center}
+.phase.active{border-color:var(--working)}.phase.done{border-color:var(--done)}
+.phase.blocked{border-color:var(--blocked)}.phase small{display:block;color:var(--sub)}
+.phase .indicator{width:22px;height:22px;border:3px solid var(--line);border-radius:50%;flex:none}
+.phase.active .indicator{border-top-color:var(--working);animation:spin .9s linear infinite}
+.phase.done .indicator{background:var(--done);border-color:var(--done)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.phase.active .indicator{animation:none}}
+@media(max-width:560px){.phases{grid-template-columns:1fr}.pipe{grid-template-columns:repeat(3,1fr)}}
 </style>
 </head>
 <body>
@@ -77,6 +88,11 @@ h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 8px}
     <div class="conn" id="conn"><i></i><span>연결 확인 중</span></div>
   </header>
 
+  <div class="phases" aria-live="polite" aria-label="생성 단계">
+    <div class="phase" id="phase-writing"><i class="indicator" aria-hidden="true"></i><div><b>글 생성</b><small>대기</small></div></div>
+    <div class="phase" id="phase-images"><i class="indicator" aria-hidden="true"></i><div><b>이미지 생성</b><small>본문 확정 후 시작</small></div></div>
+    <div class="phase" id="phase-finishing"><i class="indicator" aria-hidden="true"></i><div><b>마무리</b><small>이미지 생성 후 시작</small></div></div>
+  </div>
   <div class="grid">
     <div>
       <div class="stagewrap" id="stagewrap">
@@ -96,6 +112,7 @@ h2{font-family:var(--display);font-weight:400;font-size:20px;margin:0 0 8px}
     </aside>
   </div>
   <p class="help" id="help"></p>
+  <p class="help" id="host-note">이 애니메이션은 브라우저 진행 화면에서 실행됩니다. 채팅 호스트가 HTML·JS를 지원하지 않으면 채팅 안에서는 텍스트 상태로 안내합니다.</p>
 </div>
 
 <script>
@@ -125,11 +142,12 @@ const STAGES = [
   {id:'0', no:'0', label:'입력 확인'},
   {id:'1', no:'1', label:'리서치'},
   {id:'A', no:'A', label:'아웃라인 확인'},
-  {id:'2', no:'2', label:'초안 작성'},
-  {id:'3', no:'3', label:'병렬 검토'},
-  {id:'4', no:'4', label:'수정'},
+  {id:'2', no:'2', label:'글 생성'},
+  {id:'3', no:'3', label:'본문 검증'},
+  {id:'4', no:'4', label:'본문 확정'},
   {id:'5', no:'5', label:'이미지 제작'},
-  {id:'B', no:'B', label:'최종 승인'},
+  {id:'6', no:'6', label:'마무리'},
+  {id:'B', no:'B', label:'최종 확인'},
 ];
 
 let S = blankState();
@@ -380,7 +398,7 @@ function placeOverlays(){
 
 // ---------- 패널 ----------
 const $ = id => document.getElementById(id);
-function fmtTime(iso){ if(!iso) return ''; const m = String(iso).match(/T(\d\d:\d\d:\d\d)/); return m?m[1]:''; }
+function fmtTime(iso){ if(!iso) return ''; const d=new Date(iso); return isNaN(d)?'':d.toLocaleTimeString('ko-KR',{hour12:false}); }
 function render(){
   $('task').textContent = S.task || '블로그 편집국';
   document.title = (S.task||'블로그 편집국')+' – 진행 상황';
@@ -388,12 +406,30 @@ function render(){
   let line = S.finished ? '모든 단계를 마쳤어요. 발행은 직접 해 주세요.'
     : st ? (/[AB]/.test(st.id) ? `승인 ${st.id}: ${st.label}` : `${st.no}단계: ${st.label}`) : '';
   if (!S.finished && S.round && (S.stage==='3' || S.stage==='4')) line += `, ${S.round}라운드`;
-  $('stageline').textContent = line;
+  $('stageline').textContent = mode==='lost' ? '연결 끊김 — 마지막 수신 상태' : line;
+  const ranks = {'0':0,'1':1,'A':1.5,'2':2,'3':3,'4':4,'5':5,'6':6,'B':7};
+  const rank = S.finished ? 8 : (ranks[S.stage] || 0);
+  const groups = [
+    ['writing',2,5,['writer','fact','seo','lint'],'제목·소제목·본문·FAQ 작성 및 검증'],
+    ['images',5,6,['design'],'확정 원고에 맞춰 썸네일·인포그래픽 생성'],
+    ['finishing',6,7,['lead'],'이미지 배치·게시 파일·최종 검사']
+  ];
+  for(const [id,start,end,agents,label] of groups){
+    const el = $('phase-'+id);
+    let state = rank>=end ? 'done' : rank>=start ? 'active' : '';
+    const blocked = agents.some(a=>S.agents[a]?.state==='blocked');
+    if(state==='active' && blocked) state='blocked';
+    if(state==='active' && mode==='lost') state='blocked';
+    el.className = 'phase '+state;
+    el.setAttribute('aria-busy', String(state==='active'));
+    el.querySelector('small').textContent = state==='done' ? '완료' : state==='blocked' ? (mode==='lost'?'연결 확인 필요':'작업 중단 · 확인 필요') : state==='active' ? label : '대기';
+  }
 
   const cur = STAGES.findIndex(s=>s.id===S.stage);
   $('pipe').innerHTML = '';
   STAGES.forEach((s,i)=>{
     const li = document.createElement('li');
+    if(s.id==='A' && S.stage!=='A' && !(S.log||[]).some(e=>e.stage==='A')) li.hidden=true;
     li.className = (S.finished || i<cur) ? 'done' : i===cur ? 'now' : '';
     const sp = document.createElement('span'); sp.textContent = s.no; li.append(sp, s.label);
     if (i===cur && !S.finished) li.setAttribute('aria-current','step');
@@ -441,59 +477,24 @@ function apply(next){
   render();
 }
 
-// 실시간용: 새 로그를 한 장면씩 순서대로 재생 (기록이 몰려 와도 중간 과정이 보이도록)
-const queue = []; let playing = false, snapshot = null;
-function ingestLive(next, replayAll){
-  snapshot = normalize(next);
-  const top = maxSeqOf(snapshot);
-  if (lastSeq !== null && top < lastSeq) replayAll = true; // 새 작업(init)으로 초기화됨
-  if (lastSeq === null && !replayAll){ // 이미 진행 중인 작업을 처음 연 경우: 현재 상태부터
-    S = normalize(next); lastSeq = top; render(); return;
-  }
-  if (replayAll){
-    queue.length = 0; lastSeq = 0;
-    S = blankState(); S.task = snapshot.task; S.log = [];
-  }
-  const fresh = (snapshot.log||[]).filter(e => (e.seq||0) > lastSeq).sort((x,y)=>x.seq-y.seq);
-  if (fresh.length){ queue.push(...fresh); lastSeq = top; }
-  S.task = snapshot.task;
-  if (!playing) playNext();
-}
-function playNext(){
-  if (!queue.length){
-    playing = false;
-    if (snapshot){ const lg = S.log; S = normalize(snapshot); S.log = lg; render(); } // 최종 상태와 맞춤
-    return;
-  }
-  playing = true;
-  const e = queue.shift();
-  playEvent(e);
-  let wait = e.kind==='handoff' ? 1800 : e.kind==='stage' ? 900 : e.kind==='state' ? 1400 : 700;
-  if (queue.length > 15) wait /= 3; else if (queue.length > 6) wait /= 1.7;
-  if (reduceMotion) wait = Math.min(wait, 500);
-  setTimeout(playNext, wait);
-}
-function playEvent(e){
-  S.log = (S.log||[]).concat([e]).slice(-80);
-  if (e.kind==='state' && e.state && S.agents[e.agent]) S.agents[e.agent] = {state:e.state, detail: e.msg||''};
-  else if (e.kind==='stage'){ if (e.stage) S.stage = e.stage; if (e.round != null) S.round = e.round; }
-  else if (e.kind==='finish'){ S.finished = true; ORDER.forEach(a=>{ if(['working','waiting','review','blocked'].includes(S.agents[a].state)) S.agents[a].state='done'; }); }
-  else if (e.kind==='handoff' && e.to) e.to.forEach(t => sendPaper(e.agent, t));
-  render();
-}
+// Current state wins immediately; history remains in the work log.
+function ingestLive(next){ apply(next); }
 
 // ---------- 실시간 연결 / 데모 ----------
 // status.js(스크립트)를 1초마다 다시 불러온다. 스크립트 태그는 file://에서도 동작하므로 서버가 필요 없다.
-let mode = 'connecting', demoTimer = null, failCount = 0, everLoaded = false, plainSrc = false, lastRaw = '', pushActive = false;
+let mode = 'connecting', failCount = 0, everLoaded = false, plainSrc = false, lastRaw = '', pushActive = false;
 function setConn(m){
   mode = m; const c = $('conn');
   c.className = 'conn '+m;
   c.querySelector('span').textContent = {live:'실시간 연결됨', demo:'데모 재생 중', lost:'연결 끊김, 마지막 상태 표시 중', connecting:'연결 확인 중'}[m];
-  $('help').innerHTML = m!=='demo' ? '' : window.__HARNESS_NO_POLL
-    ? '하네스가 다음 단계를 기록하면 자동으로 실제 진행 상황으로 바뀌어요.'
-    : '이 폴더에서 아직 <code>status.js</code>를 찾지 못해 데모를 보여 주고 있어요. 하네스가 시작되면 자동으로 실제 진행 상황으로 바뀌어요.';
+  $('help').textContent = m==='lost' ? '상태 연결이 없습니다. 진행 화면 서버 또는 상태 전달을 확인해 주세요. 데모나 임의 진행률은 표시하지 않습니다.' : '';
+  render();
 }
 function loadStatus(){
+  if(location.protocol==='http:' || location.protocol==='https:'){
+    return fetch('status.json?t='+Date.now(), {cache:'no-store', signal:AbortSignal.timeout(3000)})
+      .then(r=>r.ok?r.json():null).catch(()=>null);
+  }
   return new Promise(resolve => {
     const el = document.createElement('script');
     el.src = plainSrc ? 'status.js' : 'status.js?t='+Date.now();
@@ -504,7 +505,7 @@ function loadStatus(){
 }
 async function poll(){
   // 내장 브라우저에 코드로 넣은 경우(open-js): 파일이 없으니 읽지 않고, Claude의 직접 전달만 기다린다
-  if (window.__HARNESS_NO_POLL){ if (mode==='connecting') startDemo(); return; }
+  if (window.__HARNESS_NO_POLL) return;
   window.__HARNESS_STATUS = null;
   let j = await loadStatus();
   if (!j && !everLoaded && !plainSrc){ // 일부 브라우저는 file:// 주소의 ?t= 를 싫어함
@@ -516,7 +517,7 @@ async function poll(){
   if (j){
     failCount = 0; everLoaded = true;
     let replayAll = false;
-    if (mode==='demo'){ stopDemo(); lastSeq = null; lastRaw = ''; replayAll = true; } // 지켜보던 중이면 처음부터 재생
+    if (mode==='demo'){ lastSeq = null; lastRaw = ''; } // 지켜보던 중이면 처음부터 재생
     if (mode!=='live') setConn('live');
     const raw = JSON.stringify(j);
     if (raw !== lastRaw){ lastRaw = raw; ingestLive(j, replayAll); }
@@ -525,7 +526,7 @@ async function poll(){
   } else {
     failCount++;
     if (mode==='live' && failCount>2) setConn('lost');
-    else if (mode==='connecting') startDemo();
+    else if (mode==='connecting' && failCount>2) setConn('lost');
   }
   setTimeout(poll, mode==='demo' ? 2000 : 1000);
 }
@@ -535,7 +536,7 @@ async function poll(){
 window.__harnessPush = function(obj){
   try {
     let replayAll = false;
-    if (mode==='demo'){ stopDemo(); lastSeq = null; lastRaw = ''; replayAll = true; }
+    if (mode==='demo'){ lastSeq = null; lastRaw = ''; }
     pushActive = true; failCount = 0; everLoaded = true;
     if (mode!=='live') setConn('live');
     const raw = JSON.stringify(obj);
@@ -544,44 +545,6 @@ window.__harnessPush = function(obj){
     return 'ok seq=' + maxSeqOf(obj);
   } catch(e){ return 'error: ' + e; }
 };
-function startDemo(){
-  setConn('demo');
-  const D = blankState(); D.task = '데모: 초보자를 위한 AI 글쓰기 도구 비교'; D.log = []; let seq = 0;
-  const now = () => new Date().toISOString().slice(0,19);
-  const L = (agent,msg,kind,to) => { seq++; D.log.push({seq,t:now(),agent,msg,kind:kind||'log',to}); D.log = D.log.slice(-60); };
-  const set = (a,s,d) => { D.agents[a] = {state:s, detail:d||''}; if (d) L(a,d,'state'); };
-  const stage = (s,rd) => { D.stage = s; if (rd!==undefined) D.round = rd; L('lead', (/[AB]/.test(s)?'승인 '+s:s+'단계')+'로 이동','stage'); };
-  const hand = (a,to,m) => L(a,m,'handoff',to);
-  const steps = [
-    [0,   ()=>{ L('lead','작업 시작'); stage('0'); set('lead','working','입력 카드 정리 중'); }],
-    [2500,()=>{ set('lead','idle',''); stage('1'); set('research','working','검색의도 유형 분류 중'); }],
-    [3500,()=>{ set('research','working','상위 노출 글 10개 구조 분석'); }],
-    [3500,()=>{ set('research','done','리서치 브리프 완성'); hand('research',['writer'],'리서치 브리프'); stage('2'); }],
-    [1500,()=>{ set('writer','working','초안 v1: 도입부와 H2 작성 중'); }],
-    [4000,()=>{ set('writer','working','FAQ 5개와 JSON-LD 작성 중'); }],
-    [3500,()=>{ set('writer','waiting','검토 결과 기다리는 중'); hand('writer',['seo','fact','lint'],'초안 v1'); stage('3',1); }],
-    [1500,()=>{ set('seo','working','제목·메타설명 점검'); set('fact','working','문장별 출처 대조 중'); set('lint','working','기계 점검 실행'); }],
-    [3000,()=>{ set('lint','done','PASS 18, WARN 2, FAIL 0'); hand('lint',['writer'],'기계 점검 결과'); }],
-    [2500,()=>{ set('fact','blocked','가격 주장 1건 근거 없음'); }],
-    [2500,()=>{ set('seo','done','82점, 수정지시 4건'); hand('seo',['writer'],'SEO·AEO 검토표'); }],
-    [1500,()=>{ set('fact','done','근거 없음 1건 삭제 지시'); hand('fact',['writer'],'사실검증표'); stage('4',1); set('writer','working','수정 1라운드 반영 중'); }],
-    [4500,()=>{ set('writer','done','최종 원고 확정'); hand('writer',['design'],'확정 원고'); stage('5'); set('design','working','썸네일: 캐릭터·말풍선 배치'); }],
-    [3500,()=>{ set('design','working','인포그래픽 2장 렌더·겹침 점검'); }],
-    [3500,()=>{ set('design','done','이미지 3장 완성'); hand('design',['human'],'기사 패키지 + 이미지'); stage('B'); }],
-    [1500,()=>{ set('human','review','발행 전 최종 확인 필요'); }],
-    [7000,()=>{ set('human','done','승인'); D.finished = true; L('lead','사람 승인 완료','stage'); }],
-    [6000,()=>{ startDemo(); }],
-  ];
-  stopDemo(); lastSeq = null;
-  let i = 0;
-  const run = () => {
-    if (mode!=='demo') return;
-    steps[i][1](); apply(JSON.parse(JSON.stringify(D)));
-    i++; if (i < steps.length) demoTimer = setTimeout(run, steps[i][0]);
-  };
-  run();
-}
-function stopDemo(){ if (demoTimer) clearTimeout(demoTimer); demoTimer = null; }
 
 render();
 requestAnimationFrame(frame);

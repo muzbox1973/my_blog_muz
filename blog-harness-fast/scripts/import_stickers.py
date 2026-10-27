@@ -28,6 +28,7 @@ import sys
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
+from _local_paths import contained_path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DEFAULT_DIR = os.path.normpath(os.environ.get("HARNESS_STICKERS") or os.path.join(HERE, "..", "assets", "stickers"))
@@ -161,7 +162,7 @@ def build_preview(d, stickers):
     x = y = 10
     rowh, prev, places = 0, None, []
     for s in cat:
-        p = os.path.join(d, s["file"])
+        p = contained_path(d, s["file"])
         if not os.path.exists(p):
             continue
         im = Image.open(p).convert("RGBA")

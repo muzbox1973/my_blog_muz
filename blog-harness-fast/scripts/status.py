@@ -1,462 +1,229 @@
 #!/usr/bin/env python3
-"""블로그 하네스 진행 상황을 status.json과 status.js에 기록한다 (사무실 애니메이션 office.html용).
-office.html은 status.js를 1초마다 다시 불러오므로 더블클릭으로 열어도 실시간으로 움직이고,
-기록이 한꺼번에 몰려 들어와도 로그를 한 장면씩 순서대로 재생한다.
-
-가장 간단한 사용법 (단계가 바뀔 때마다 한 줄):
-    python3 status.py --dir 작업폴더 init --task "주제"
-    python3 status.py --dir 작업폴더 go 0          # 입력 카드
-    python3 status.py --dir 작업폴더 go 1          # 리서치 시작
-    python3 status.py --dir 작업폴더 go A          # (선택) 아웃라인 승인 요청
-    python3 status.py --dir 작업폴더 go 2          # 리서치 끝 → 초안 작성 시작
-    python3 status.py --dir 작업폴더 go 3          # 초안 끝 → 검토 3명 병렬 시작
-    python3 status.py --dir 작업폴더 go 4          # 검토 끝 → 수정 시작
-    python3 status.py --dir 작업폴더 go 5          # 수정 끝 → 썸네일·인포그래픽 제작 시작
-    python3 status.py --dir 작업폴더 go B          # 이미지 끝 → 사람 최종 확인
-    python3 status.py --dir 작업폴더 go done       # 사람 승인 후
-
-내장 브라우저(Claude 앱 안 브라우저)로 보여 줄 때:
-    python3 status.py --dir 작업폴더 open-js   → 출력 전체를 https 페이지 탭에서 javascript_tool로 실행 (처음 한 번)
-    python3 status.py --dir 작업폴더 push-js   → 단계가 바뀔 때마다 출력 한 줄을 javascript_tool로 실행
-  go 뒤에 문구를 붙이면 그 단계 담당자의 말풍선이 된다:  go 2 "초안 v1: FAQ 작성 중"
-
-세부 기록 (선택):
-    set <에이전트> <상태> "문구"      handoff <보낸이> <받는이,받는이> "문구"
-    log <에이전트> "문구"             stage <단계> [--round N]      finish "문구"
-
-에이전트 id: lead research writer seo fact lint design human
-상태: idle working waiting done blocked review
-
-실행 중 오류가 나도 경고만 출력하고 종료코드 0을 돌려준다 (본 작업을 막지 않음).
-표준 라이브러리만 사용한다.
+"""Real progress: init -> go 0/1/2/3/4 -> article-ready -> go 5/6/B/done.
+Run serve in a background terminal, then actually open the printed loopback URL.
+File creation never implies that writing, review, or rendering has finished.
 """
 import argparse
 import contextlib
 import json
 import os
+from pathlib import Path
 import shutil
-import subprocess
 import sys
 import tempfile
 import time
 import uuid
-from datetime import datetime
-
-try:
-    import fcntl
-except ImportError:  # Windows
-    fcntl = None
+from datetime import datetime, timezone
 
 AGENTS = ["lead", "research", "writer", "seo", "fact", "lint", "design", "human"]
 STATES = ["idle", "working", "waiting", "done", "blocked", "review"]
-STATE_KO = {"idle": "대기", "working": "작업 시작", "waiting": "결과 기다림",
-            "done": "완료", "blocked": "막힘", "review": "확인 필요"}
-STAGES = ["0", "1", "A", "2", "3", "4", "5", "B"]
-REVIEWERS = ["seo", "fact", "lint"]
-LOG_KEEP = 80
-DETAIL_MAX = 60
-HERE = os.path.dirname(os.path.abspath(__file__))
-OFFICE_HTML = os.path.join(HERE, "..", "assets", "office.html")
-
-
-# 단계 순서 (A는 1과 2 사이의 선택 단계)
-GO_ORDER = ["0", "1", "2", "3", "4", "5", "B", "done"]
-GO_RANK = {"0": 0, "1": 1, "A": 1.5, "2": 2, "3": 3, "4": 4, "5": 5, "B": 6, "done": 7}
-
-# 작업 폴더에 생기는 산출물 → 감시자가 단계를 추정하는 근거
-REVIEW_FILES = {"review-seo-aeo.md": "seo", "review-facts.md": "fact", "lint-result.txt": "lint"}
-WATCH_FILES = ["research-brief.md", "article-package.md", "changelog.md", "visual-plan.json"] + list(REVIEW_FILES)
-WATCH_MAX_SECONDS = 4 * 3600
+GO_ORDER = ["0", "1", "2", "3", "4", "5", "6", "B", "done"]
+GO_RANK = {name: i for i, name in enumerate(GO_ORDER)}
+GO_RANK["A"] = 1.5
+OFFICE_HTML = Path(__file__).resolve().parent.parent / "assets" / "office.html"
 
 
 def now():
-    return datetime.now().isoformat(timespec="seconds")
+    return datetime.now(timezone.utc).isoformat()
 
 
 def fresh(task):
-    return {
-        "version": 2, "task": task, "stage": "0", "round": 0, "finished": False, "seq": 0,
-        "agents": {a: {"state": "idle", "detail": "", "since": now()} for a in AGENTS},
-        "log": [], "updated": now(),
-    }
+    return {"version": 3, "run_id": uuid.uuid4().hex, "task": task, "stage": "0", "round": 0,
+            "finished": False, "seq": 0, "updated": now(), "log": [],
+            "agents": {a: {"state": "idle", "detail": "", "since": now()} for a in AGENTS}}
 
 
 def load(d):
-    try:
-        with open(os.path.join(d, "status.json"), encoding="utf-8") as f:
-            s = json.load(f)
-        for a in AGENTS:
-            s.setdefault("agents", {}).setdefault(a, {"state": "idle", "detail": "", "since": now()})
-        s.setdefault("log", [])
-        s.setdefault("seq", 0)
-        s.setdefault("round", 0)
-        return s
-    except FileNotFoundError:
-        return fresh("(제목 없음)")
+    return json.loads((Path(d) / "status.json").read_text(encoding="utf-8"))
 
 
 def write_atomic(path, text):
+    path = Path(path)
+    fd, tmp = tempfile.mkstemp(dir=path.parent, prefix=".status-", suffix=".tmp")
     try:
-        fd, tmp = tempfile.mkstemp(dir=os.path.dirname(path), prefix=".status-", suffix=".tmp")
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            f.write(text)
-        os.replace(tmp, path)  # 원자적 교체: 화면이 반쯤 쓴 파일을 읽지 않게
-    except OSError:
-        # 동기화 폴더 등에서 이름 바꾸기가 막히면 그냥 덮어쓴다
-        try:
-            os.remove(tmp)
-        except Exception:
-            pass
-        with open(path, "w", encoding="utf-8") as f:
-            f.write(text)
-
-
-def save(d, s):
-    s["updated"] = now()
-    as_json = json.dumps(s, ensure_ascii=False, indent=1)
-    # status.js: office.html을 더블클릭(file://)으로 열어도 읽을 수 있도록 스크립트 형태로도 기록
-    as_js = "window.__HARNESS_STATUS = " + json.dumps(s, ensure_ascii=True) + ";\n"
-    write_atomic(os.path.join(d, "status.json"), as_json)
-    write_atomic(os.path.join(d, "status.js"), as_js)
-    # 미러: 작업은 세션 작업공간에서 하고, 사람은 자기 컴퓨터 폴더에서 office.html을 볼 때
-    m = s.get("mirror")
-    if m and os.path.abspath(m) != os.path.abspath(d):
-        try:
-            write_atomic(os.path.join(m, "status.js"), as_js)
-            write_atomic(os.path.join(m, "status.json"), as_json)
-        except Exception as e:
-            print(f"[status] 경고: 컴퓨터 폴더({m})에 쓰지 못함 ({e})", file=sys.stderr)
-
-
-def add_log(s, agent, msg, kind="log", **extra):
-    s["seq"] += 1
-    entry = {"seq": s["seq"], "t": now(), "agent": agent, "kind": kind, "msg": (msg or "")[:120]}
-    entry.update({k: v for k, v in extra.items() if v is not None})
-    s["log"].append(entry)
-    s["log"] = s["log"][-LOG_KEEP:]
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            stream.write(text)
+        os.replace(tmp, path)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
 
 
 @contextlib.contextmanager
 def locked(d):
-    """오케스트레이터와 감시자가 동시에 쓰지 않도록 잠근다."""
-    if fcntl is None:
-        yield
-        return
-    with open(os.path.join(d, ".status.lock"), "w") as lf:
-        fcntl.flock(lf, fcntl.LOCK_EX)
+    # Cross-platform lock; do not silently race or delete another writer's lock.
+    path = Path(d) / ".status.lock"
+    deadline = time.monotonic() + 5
+    while True:
         try:
-            yield
-        finally:
-            fcntl.flock(lf, fcntl.LOCK_UN)
+            fd = os.open(path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            break
+        except FileExistsError:
+            if time.monotonic() >= deadline:
+                raise RuntimeError("상태 기록 잠금이 남아 있습니다. 실행 중인 기록 작업을 확인하세요")
+            time.sleep(0.05)
+    try:
+        yield
+    finally:
+        os.close(fd)
+        path.unlink()
 
 
-def check_agent(a):
-    if a not in AGENTS:
-        raise ValueError(f"알 수 없는 에이전트 '{a}'. 가능한 값: {', '.join(AGENTS)}")
+def save(d, s):
+    s["updated"] = now()
+    js = "window.__HARNESS_STATUS = " + json.dumps(s, ensure_ascii=True) + ";\n"
+    for target in {Path(d), Path(s.get("mirror") or d)}:
+        write_atomic(target / "status.json", json.dumps(s, ensure_ascii=False, indent=2))
+        write_atomic(target / "status.js", js)
 
 
-# ---- 기본 동작 ----
+def add_log(s, agent, msg, kind="log", **extra):
+    s["seq"] += 1
+    s["log"].append(dict(seq=s["seq"], t=now(), agent=agent, msg=msg[:180], kind=kind, **extra))
+    s["log"] = s["log"][-80:]
+
+
 def do_set(s, agent, state, detail=""):
-    check_agent(agent)
-    detail = (detail or "")[:DETAIL_MAX]
-    ag = s["agents"][agent]
-    if ag.get("state") != state:
-        ag["since"] = now()
-    ag["state"], ag["detail"] = state, detail
-    add_log(s, agent, detail or STATE_KO[state], kind="state", state=state)
+    if agent not in AGENTS or state not in STATES:
+        raise ValueError("알 수 없는 담당자 또는 작업 상태")
+    s["agents"][agent] = dict(state=state, detail=detail[:120], since=now())
+    add_log(s, agent, detail or state, "state", state=state)
 
 
-def do_stage(s, stage, rnd=None):
-    s["stage"] = stage
-    if rnd is not None:
-        s["round"] = rnd
-    label = f"승인 {stage}" if stage in ("A", "B") else f"{stage}단계"
-    if s.get("round") and stage in ("3", "4"):
-        label += f" ({s['round']}라운드)"
-    add_log(s, "lead", f"{label}로 이동", kind="stage", stage=stage, round=s.get("round"))
-
-
-def do_handoff(s, src, dst, msg=""):
-    check_agent(src)
-    for x in dst:
-        check_agent(x)
-    add_log(s, src, msg or "산출물 전달", kind="handoff", to=dst)
-
-
-def do_finish(s, msg=""):
-    s["finished"] = True
-    for a in AGENTS:
-        if s["agents"][a]["state"] in ("working", "waiting", "review", "blocked"):
-            s["agents"][a]["state"] = "done"
-    add_log(s, "lead", msg or "작업 완료", kind="finish")
-
-
-def state_of(s, a):
-    return s["agents"][a]["state"]
-
-
-# ---- 단계 전환 한 줄 명령 ----
-def go_to(s, target, detail="", source="go"):
-    """target 단계로 이동. 건너뛴 단계가 있으면 순서대로 채워 넣고, 이미 지난 단계면 무시한다."""
+def go_to(s, target, detail=""):
     if target not in GO_RANK:
-        raise ValueError(f"go 단계는 0 1 A 2 3 4 B done 중 하나: '{target}'")
-    if s.get("finished"):
-        return "이미 완료된 작업"
-    cur = s.get("stage", "0")
-    if target == cur == "0" and state_of(s, "lead") == "idle":
-        do_set(s, "lead", "working", detail or "입력 카드 정리 중")
-        return "기록됨"
-    if target == cur:
-        main = {"0": "lead", "1": "research", "A": "human", "2": "writer", "3": "seo", "4": "writer",
-                "5": "design", "B": "human"}.get(cur)
-        if detail and main:
-            do_set(s, main, s["agents"][main]["state"], detail)
-        return "같은 단계 (문구만 갱신)"
-    back_ok = (target == "3" and cur == "4")  # 수정 후 재검토 라운드
-    if GO_RANK[target] < GO_RANK[cur] and not back_ok:
-        return f"이미 {cur}단계까지 진행되어 무시"
-    if not back_ok:
-        start = GO_ORDER.index("2") if cur == "A" else GO_ORDER.index(cur) + 1 if cur in GO_ORDER else 0
-        end = GO_ORDER.index(target) if target in GO_ORDER else GO_ORDER.index("2")
-        missed = GO_ORDER[start:end]
-        if missed:
-            add_log(s, "lead", f"빠진 단계 {', '.join(missed)} 기록을 채움 ({source})", kind="log")
-            for m in missed:
-                do_go(s, m)
-    do_go(s, target, detail)
-    return "기록됨"
-
-
-def do_go(s, target, detail=""):
-    A = s["agents"]
+        raise ValueError("단계: 0 1 A 2 3 4 5 6 B done")
+    current = s["stage"]
+    if s["finished"]:
+        raise ValueError("이미 완료된 작업입니다. 새 작업은 init으로 시작하세요")
+    if GO_RANK[target] < GO_RANK[current]:
+        raise ValueError("이전 단계로 자동 이동할 수 없습니다. 변경된 원고는 새 작업으로 시작하세요")
+    if GO_RANK[target] - GO_RANK[current] > 1:
+        raise ValueError("단계를 건너뛸 수 없습니다. 실제 작업 완료 후 다음 단계로 이동하세요")
     if target == "0":
-        do_stage(s, "0")
         do_set(s, "lead", "working", detail or "입력 카드 정리 중")
     elif target == "1":
-        if state_of(s, "lead") == "working":
-            do_set(s, "lead", "idle", "리서치에 넘김")
-        do_stage(s, "1")
-        do_set(s, "research", "working", detail or "키워드·검색의도 리서치 중")
+        do_set(s, "lead", "idle", "리서치 진행")
+        do_set(s, "research", "working", detail or "키워드·근거 조사")
     elif target == "A":
-        if state_of(s, "research") != "done":
-            do_set(s, "research", "done", "리서치 브리프 완성")
-        do_handoff(s, "research", ["human"], "키워드·아웃라인")
-        do_stage(s, "A")
-        do_set(s, "human", "review", detail or "키워드·아웃라인 확인")
+        do_set(s, "research", "done", "리서치 완료")
+        do_set(s, "human", "review", detail or "아웃라인 확인")
     elif target == "2":
-        if state_of(s, "lead") == "working":
-            do_set(s, "lead", "idle", "")
-        if state_of(s, "research") != "done":
-            do_set(s, "research", "done", "리서치 브리프 완성")
-            do_handoff(s, "research", ["writer"], "리서치 브리프")
-        if state_of(s, "human") == "review":
-            do_set(s, "human", "done", "아웃라인 승인")
-            do_handoff(s, "human", ["writer"], "승인된 아웃라인")
-        do_stage(s, "2")
-        do_set(s, "writer", "working", detail or "초안 v1 작성 중")
+        do_set(s, "research", "done", "리서치 완료")
+        do_set(s, "human", "idle", "")
+        do_set(s, "writer", "working", detail or "제목·소제목·본문·FAQ 작성 중")
     elif target == "3":
-        rnd = (s.get("round") or 0) + 1
-        do_set(s, "writer", "waiting", "검토 결과 기다림")
-        do_handoff(s, "writer", REVIEWERS, f"초안 v{rnd}")
-        do_stage(s, "3", rnd)
-        do_set(s, "seo", "working", detail or "제목·구조·AEO 점검 중")
-        do_set(s, "fact", "working", "문장별 출처 대조 중")
-        do_set(s, "lint", "working", "check_article.py 실행 중")
+        do_set(s, "writer", "waiting", "본문 검증 중 — 이미지 생성 대기")
+        do_set(s, "seo", "working", "SEO·AEO 자가 점검")
+        do_set(s, "fact", "working", detail or "팩트체크 중")
+        do_set(s, "lint", "working", "기계 점검 중")
     elif target == "4":
-        for r in REVIEWERS:
-            if state_of(s, r) != "done":
-                do_set(s, r, "done", A[r]["detail"] if state_of(s, r) == "blocked" else "검토 완료")
-                do_handoff(s, r, ["writer"], "수정지시")
-        do_stage(s, "4", s.get("round") or 1)
-        do_set(s, "writer", "working", detail or f"수정 {s.get('round') or 1}라운드 반영 중")
+        for agent in ["seo", "fact", "lint"]:
+            do_set(s, agent, "done", "검토 완료")
+        do_set(s, "writer", "working", detail or "검토 반영·본문 최종 확정 중")
     elif target == "5":
-        do_set(s, "writer", "done", "최종 원고 확정")
-        do_handoff(s, "writer", ["design"], "확정 원고")
-        do_stage(s, "5")
-        do_set(s, "design", "working", detail or "썸네일·인포그래픽 스티커 배치 중")
+        do_set(s, "writer", "done", "본문 생성·검증·수정 완료")
+        do_set(s, "design", "working", detail or "확정 제목·소제목·내용에 맞춰 이미지 생성 중")
+    elif target == "6":
+        if s["agents"]["design"]["state"] != "done":
+            raise ValueError("이미지 생성·육안 확인 완료를 기록한 뒤 마무리로 이동하세요")
+        do_set(s, "design", "done", "이미지 생성·육안 확인 완료")
+        do_set(s, "lead", "working", detail or "이미지 배치·게시 HTML·최종 검사 중")
     elif target == "B":
-        if state_of(s, "writer") != "done":
-            do_set(s, "writer", "done", "최종 패키지 완성")
-        if state_of(s, "design") != "done":
-            do_set(s, "design", "done", "이미지 완성")
-        do_handoff(s, "design", ["human"], "기사 패키지 + 이미지")
-        do_stage(s, "B")
-        do_set(s, "human", "review", detail or "발행 전 최종 확인")
+        do_set(s, "lead", "done", "게시 파일·검사 완료")
+        do_set(s, "human", "review", detail or "최종 확인 대기")
     elif target == "done":
-        if state_of(s, "human") == "review":
-            do_set(s, "human", "done", "승인")
-        do_finish(s, detail or "사람 승인 완료")
-    else:
-        raise ValueError(f"go 단계는 0 1 A 2 3 4 B done 중 하나: '{target}'")
+        do_set(s, "human", "done", "최종 확인 완료")
+        s["finished"] = True
+        add_log(s, "lead", detail or "작업 완료 — 블로그 발행은 사람이 직접", "finish")
+    s["stage"] = target
+    add_log(s, "lead", f"단계 {target}", "stage", stage=target)
 
 
-# ---- 내장 브라우저용: office.html을 아무 https 페이지에 통째로 써 넣는 코드 ----
 def open_js(d, with_state=True):
-    """내장 브라우저는 사용자 컴퓨터의 파일이나 https 주소만 연다. 그래서 https 페이지(예: https://example.com)를
-    preview_start로 열고, 이 코드를 javascript_tool로 실행해 진행 화면을 그 탭에 그린다. 파일 폴링은 끈다."""
-    src = open(OFFICE_HTML, encoding="utf-8").read()
-    lines = [l.strip() for l in src.splitlines()]
-    html_min = "\n".join(l for l in lines if l and not l.startswith("//"))
-    html_min = html_min.replace("<head>", "<head>\n<script>window.__HARNESS_NO_POLL=1</script>", 1)
-    js = "document.open();document.write(" + json.dumps(html_min, ensure_ascii=False) + ");document.close();"
-    if with_state and os.path.exists(os.path.join(d, "status.json")):
-        s = load(d)
-        s["log"] = s.get("log", [])[-40:]
-        # 화면 스크립트가 준비될 때까지 잠깐 기다렸다가 현재 상태를 넣는다
-        js += ("(function(st,n){(function t(){if(window.__harnessPush)window.__harnessPush(st);"
-               "else if(n++<60)setTimeout(t,100);})();})(" + json.dumps(s, ensure_ascii=True) + ",0);")
-    return js + '"office ready"'
-
-
-# ---- 감시자: 산출물 파일이 생기거나 바뀌면 단계를 자동으로 진행 ----
-def scan(d):
-    out = {}
-    for name in WATCH_FILES:
-        try:
-            out[name] = os.stat(os.path.join(d, name)).st_mtime
-        except OSError:
-            pass
-    return out
-
-
-def on_file(s, name):
-    cur = s.get("stage", "0")
-    if s.get("finished"):
-        return
-    if name == "research-brief.md" and GO_RANK.get(cur, 0) < 2 and cur != "A":
-        go_to(s, "2", source="research-brief.md 감지")
-    elif name == "article-package.md" and GO_RANK.get(cur, 0) < 2:
-        go_to(s, "2", source="article-package.md 감지")
-    elif name in REVIEW_FILES:
-        # fast: 기계 점검(lint)은 초안·수정 중에도 수시로 돌리므로 단계를 옮기지 않는다.
-        # 재검토 라운드가 없으므로 수정(4) 이후에는 검토(3)로 되돌아가지 않는다.
-        r = REVIEW_FILES[name]
-        if r != "lint" and GO_RANK.get(cur, 0) < 3:
-            go_to(s, "3", source=f"{name} 감지")
-        if GO_RANK.get(s.get("stage", "0"), 0) >= 3 and s["agents"][r]["state"] not in ("done",):
-            do_set(s, r, "done", "검토 결과 저장됨")
-            do_handoff(s, r, ["writer"], {"seo": "SEO·AEO 검토표", "fact": "사실검증표", "lint": "기계 점검 결과"}[r])
-    elif name == "changelog.md" and GO_RANK.get(cur, 0) < 4:
-        go_to(s, "4", source="changelog.md 감지")
-    elif name == "visual-plan.json":
-        # fast: 이미지는 팩트체크와 동시에 만든다 → 단계는 그대로 두고 디자이너만 작업 중으로
-        if s["agents"]["design"]["state"] not in ("working", "done"):
-            do_set(s, "design", "working", "이미지 제작 (팩트체크와 동시)")
-
-
-def watch(d, token):
-    seen = scan(d)
-    t0 = time.time()
-    while time.time() - t0 < WATCH_MAX_SECONDS:
-        time.sleep(1.5)
-        try:
-            cur = scan(d)
-            changed = [n for n in WATCH_FILES if n in cur and cur[n] != seen.get(n)]
-            seen = cur
-            with locked(d):
-                s = load(d)
-                if s.get("watcher") != token or s.get("finished"):
-                    return  # 새 작업이 시작됐거나 끝남
-                before = s["seq"]
-                for name in changed:
-                    on_file(s, name)
-                if s["seq"] != before:
-                    save(d, s)
-        except Exception:
-            pass
-
-
-def start_watcher(d, token):
-    try:
-        subprocess.Popen(
-            [sys.executable, os.path.abspath(__file__), "--dir", d, "watch", "--token", token],
-            stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            start_new_session=True, close_fds=True)
-        return True
-    except Exception:
-        return False
+    html = OFFICE_HTML.read_text(encoding="utf-8").replace(
+        "<head>", "<head><script>window.__HARNESS_NO_POLL=1</script>", 1)
+    js = "document.open();document.write(" + json.dumps(html, ensure_ascii=True) + ");document.close();"
+    if with_state:
+        js += "window.__harnessPush(" + json.dumps(load(d), ensure_ascii=True) + ");"
+    return js + "'office ready'"
 
 
 def main():
-    p = argparse.ArgumentParser(description="하네스 진행 상황 기록")
-    p.add_argument("--dir", default=".", help="작업 폴더 (기본: 현재 폴더)")
+    p = argparse.ArgumentParser(description="블로그 작업 상태와 실제 진행 화면")
+    p.add_argument("--dir", default=".")
     sub = p.add_subparsers(dest="cmd", required=True)
-    c = sub.add_parser("init"); c.add_argument("--task", required=True)
-    c.add_argument("--mirror", help="사람이 office.html을 여는 컴퓨터 폴더 경로 (작업 폴더와 다를 때)")
-    c.add_argument("--no-copy", action="store_true", help="office.html을 복사하지 않음")
+    c = sub.add_parser("init"); c.add_argument("--task", required=True); c.add_argument("--mirror"); c.add_argument("--no-copy", action="store_true")
     c = sub.add_parser("go"); c.add_argument("target"); c.add_argument("detail", nargs="*")
-    c = sub.add_parser("push-js", help="내장 브라우저 javascript_tool에 넣을 상태 전달 코드 출력 (단계마다)")
-    c.add_argument("--tail", type=int, default=40, help="기록은 최근 N개만 보냄 (기본 40)")
-    c = sub.add_parser("open-js", help="내장 브라우저 javascript_tool에 넣을 '진행 화면 띄우기' 코드 출력 (처음 한 번)")
-    c.add_argument("--no-state", action="store_true", help="현재 상태 전달은 빼기")
-    c = sub.add_parser("stage"); c.add_argument("stage", choices=STAGES); c.add_argument("--round", type=int)
     c = sub.add_parser("set"); c.add_argument("agent"); c.add_argument("state", choices=STATES); c.add_argument("detail", nargs="*")
-    c = sub.add_parser("handoff"); c.add_argument("src"); c.add_argument("dst"); c.add_argument("msg", nargs="*")
-    c = sub.add_parser("log"); c.add_argument("agent"); c.add_argument("msg", nargs="+")
-    c = sub.add_parser("finish"); c.add_argument("msg", nargs="*")
-    c = sub.add_parser("watch"); c.add_argument("--token", required=True)
+    c = sub.add_parser("log"); c.add_argument("agent", choices=AGENTS); c.add_argument("detail", nargs="+")
+    c = sub.add_parser("article-ready"); c.add_argument("--package", required=True); c.add_argument("--review", required=True)
+    c = sub.add_parser("serve"); c.add_argument("--port", type=int, default=0)
+    sub.add_parser("stop")
+    c = sub.add_parser("open-js"); c.add_argument("--no-state", action="store_true")
+    c = sub.add_parser("push-js"); c.add_argument("--tail", type=int, default=40)
     args = p.parse_args()
-    d = os.path.abspath(args.dir)
-
+    d = Path(args.dir).resolve(); d.mkdir(parents=True, exist_ok=True)
     try:
-        os.makedirs(d, exist_ok=True)
-        if args.cmd == "watch":
-            watch(d, args.token)
-            return
-        if args.cmd == "init":
-            s = fresh(args.task)
-            s["watcher"] = uuid.uuid4().hex[:12]
-            if args.mirror:
-                s["mirror"] = os.path.abspath(args.mirror)
-                os.makedirs(s["mirror"], exist_ok=True)
-            add_log(s, "lead", f"작업 시작: {args.task}", kind="stage", stage="0")
-            with locked(d):
-                save(d, s)
-            watching = start_watcher(d, s["watcher"])
-            view_dir = s.get("mirror") or d
-            if not args.no_copy and os.path.exists(OFFICE_HTML):
-                for target in {d, view_dir}:
-                    shutil.copyfile(OFFICE_HTML, os.path.join(target, "office.html"))
-            print(f"[status] 준비 완료: {os.path.join(view_dir, 'office.html')}")
-            if s.get("mirror"):
-                print(f"[status] 진행 상황은 {view_dir} 에도 자동으로 계속 복사돼요 (감시자 포함)")
-            print("[status] 이 파일을 더블클릭해서 브라우저로 열어 두면 진행 상황이 실시간으로 보여요 (서버 필요 없음)")
-            if watching:
-                print("[status] 산출물 파일 감시 시작: research-brief.md, review-*.md 등이 저장되면 단계가 자동으로 넘어가요")
-            return
-
-        if args.cmd == "push-js":
-            # office.html에 상태를 직접 밀어 넣는 코드
-            s = load(d)
-            s["log"] = s.get("log", [])[-args.tail:]
-            print("window.__harnessPush(" + json.dumps(s, ensure_ascii=True) + ")")
-            return
+        if args.cmd == "serve":
+            from progress_server import serve
+            serve(d, args.port); return 0
+        if args.cmd == "stop":
+            from progress_server import stop
+            stop(d); return 0
         if args.cmd == "open-js":
-            print(open_js(d, with_state=not args.no_state))
-            return
-        lock = locked(d)
-        lock.__enter__()
-        s = load(d)
-        result = "기록됨"
-        if args.cmd == "go":
-            result = go_to(s, args.target, " ".join(args.detail))
-        elif args.cmd == "stage":
-            do_stage(s, args.stage, args.round)
-        elif args.cmd == "set":
-            do_set(s, args.agent, args.state, " ".join(args.detail))
-        elif args.cmd == "handoff":
-            do_handoff(s, args.src, [x.strip() for x in args.dst.split(",") if x.strip()], " ".join(args.msg))
-        elif args.cmd == "log":
-            check_agent(args.agent)
-            add_log(s, args.agent, " ".join(args.msg))
-        elif args.cmd == "finish":
-            do_finish(s, " ".join(args.msg))
-        save(d, s)
-        lock.__exit__(None, None, None)
-        print(f"[status] {args.cmd} {getattr(args, 'target', '')}: {result}".replace("  ", " "))
-    except Exception as e:
-        print(f"[status] 경고: 상태 기록 실패 ({e}). 본 작업은 계속 진행하세요.", file=sys.stderr)
+            print(open_js(d, not args.no_state)); return 0
+        if args.cmd == "push-js":
+            s = load(d); s["log"] = s["log"][-args.tail:]
+            print("window.__harnessPush(" + json.dumps(s, ensure_ascii=True) + ")"); return 0
+        with locked(d):
+            if args.cmd == "init":
+                s = fresh(args.task)
+                (d / "article-ready.json").unlink(missing_ok=True)
+                if args.mirror:
+                    s["mirror"] = str(Path(args.mirror).resolve()); Path(s["mirror"]).mkdir(parents=True, exist_ok=True)
+                add_log(s, "lead", "작업 시작", "stage", stage="0")
+                if not args.no_copy:
+                    for target in {d, Path(s.get("mirror") or d)}:
+                        shutil.copyfile(OFFICE_HTML, target / "office.html")
+            else:
+                s = load(d)
+                if args.cmd == "article-ready":
+                    from article_state import finalize_article
+                    if s["stage"] != "4" or Path(args.package).resolve().parent != d:
+                        raise ValueError("4단계 수정 완료 후 같은 작업 폴더의 원고를 확정하세요")
+                    marker = finalize_article(args.package, args.review)
+                    add_log(s, "writer", "검토·수정 완료 원고 확정: " + marker["sha256"][:12])
+                elif args.cmd == "go":
+                    if args.target == "done":
+                        delivery = json.loads((d / "assets-urls.json").read_text(encoding="utf-8"))
+                        if delivery.get("pushed") is not True:
+                            raise ValueError("Git 업로드 미완료: 로컬 파일만으로 완료 처리할 수 없습니다")
+                        if not delivery.get("files") or delivery.get("check", {}).get("fail"):
+                            raise ValueError("공개 이미지 주소가 없거나 실패했습니다")
+                        verification = delivery.get("check", {})
+                        if verification.get("ok") != len(delivery["files"]) or verification.get("unverified", 0):
+                            raise ValueError("공개 이미지 접근 검증이 아직 완료되지 않았습니다")
+                    if args.target == "5":
+                        from article_state import require_ready
+                        require_ready(d / "article-package.md")
+                    go_to(s, args.target, " ".join(args.detail))
+                elif args.cmd == "set":
+                    if args.agent == "design" and args.state == "working" and s["stage"] != "5":
+                        raise ValueError("이미지 생성은 본문 확정 후 5단계에서 시작하세요")
+                    do_set(s, args.agent, args.state, " ".join(args.detail))
+                elif args.cmd == "log":
+                    add_log(s, args.agent, " ".join(args.detail))
+            save(d, s)
+        print(f"[status] {args.cmd}: 기록됨 (단계 {s['stage']}, seq={s['seq']})")
+        if args.cmd == "init":
+            print(f"[status] 화면 파일: {d / 'office.html'}")
+            print("[status] serve 실행 후 출력 URL을 실제 브라우저에 여세요. init만으로 화면이 열리지는 않습니다.")
+    except Exception as exc:
+        print(f"[status] 실패: {exc}", file=sys.stderr)
+        return 1
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

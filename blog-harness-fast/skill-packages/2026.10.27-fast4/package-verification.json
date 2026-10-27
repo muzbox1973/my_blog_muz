@@ -1,0 +1,14 @@
+{
+  "version": "2026.10.27-fast4",
+  "archive": "blog-seo-aeo-harness-fast-fixed-20261027.zip",
+  "sha256": "7bd01cbc2ee9b2e361ffa1169aa2541c2e0006bdf140a58bbf742e99fb788269",
+  "repository": "muzbox1973/my_blog_muz",
+  "branch": "main",
+  "base": "blog-harness-fast",
+  "tests": {
+    "regression": "20/20 passed",
+    "chromium": "passed",
+    "mixed_images": "passed"
+  },
+  "preserved": "existing posts and user stickers"
+}

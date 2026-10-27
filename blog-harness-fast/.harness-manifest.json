@@ -1,12 +1,12 @@
 {
- "scripts/check_article.py": "beb91c260b7b44f8d31eb3b82d9c3761e38c25b6e67e9986bbecb501a817af32",
- "scripts/import_stickers.py": "958745d094d62752f11b17f64261b885657a564507c1381ecafe64723f5441aa",
- "scripts/make_post.py": "58d60feb1644d9b0495d97e20a5fd973473df2a3a997e354202d8f3674b67f86",
- "scripts/make_visual.py": "3926244ae866f3808a29a81780a5b98a95e7fcb5a42aaf124b19fb63c2f571ee",
- "scripts/repo_setup.py": "a82bc26075293b10804d006e7830d6c0843a4579af205118136cf2cb8ffe175b",
- "scripts/repo_sync.py": "f514af5c57a75065082f0e6b08e430e5087be07145f10346a737990886f50959",
- "scripts/status.py": "febcef560fc1c29c47f56bd9173bb8f0332e4d6e287ed8d49c3d7d708a7beabf",
- "assets/office.html": "039b34726845002e338aa84eb7f1e79b83c95700181e13800c65eb3b8320a2a7",
+ "scripts/check_article.py": "24ef196252040c81e911f8d1a0914bd498c38ef269567a5a24571ac07b80de04",
+ "scripts/import_stickers.py": "9e28058eaac8ea47d6b36efdcbed200d481984cc79168cbe37eb8cac6d2db2e6",
+ "scripts/make_post.py": "d97e1936bf85486b4b7353e02cd02c2814644cb619845745c3b6bb0a784ff7e2",
+ "scripts/make_visual.py": "6d204b1365daa5575b211337d2bc42d25736e9784d7654f01597f61d62bf6f0e",
+ "scripts/repo_setup.py": "61bba44c22089d91b66d360905f17c05278b7eeb24885becbe40f0476e266b61",
+ "scripts/repo_sync.py": "ff34d7a16a96874caa91ec1fea23f90ec58b85d7b84ffed39a3e417b2fb35526",
+ "scripts/status.py": "d6f3cf25198eb34f3331e7efb3557e35d88dc76dd3e46f3223e748b4b740ad66",
+ "assets/office.html": "1cbf99325ed2ff809ed408be7203a7a2d94492b1b5dd7ae3da55a39a18cdc4ad",
  "assets/stickers/_preview.png": "e4e809345c8866b4b9bb7253ba91dd1f78cbeafb5cdf5a47cfefc516165a3f5a",
  "assets/stickers/_sheet-original.png": "cfad47e08f0ccf0891561dd3db9f72abc7f7826bff7e3ef8b463973467b7862e",
  "assets/stickers/arrow-curve-blue.png": "95ca652949fe0d3c430d6409720697ac56d89854e38119aa3739fd9391f78622",
@@ -59,5 +59,8 @@
  "assets/stickers/sticky-yellow.png": "f0eb3596f5a13623eadfa82c63a30617b87fcd55251662ec5675d7424d129ae0",
  "assets/stickers/tape-blue.png": "352314a9d07b40a244f2926f01b145ddbb94bea4deaf94f72cbf6cb6bb1e32e6",
  "assets/stickers/tape-yellow.png": "fa84be4447cb9cd0856e764590249bf6bfb24e437bd5dd90f530bacc71b2972d",
- "scripts/_local_paths.py": "940614d7559b2eab348e2c66be3497e3da68425552c69a7b155d4c8284a73658"
+ "scripts/_local_paths.py": "0007f92cadebfc5f65db1c902665983e55b71552a9bb8f8b9468e4d6b905298d",
+ "scripts/article_state.py": "e6b0158e3e98cc4a9e718f6678658cf5683da586829b813936d4f4e46e8eff15",
+ "scripts/image_assets.py": "5b94edad3e1ed210d30bf06cb5166b0e01a7c6e393d2e0e364194552b85cbffa",
+ "scripts/progress_server.py": "5ec5683e7f72c7c86a2898a467b37aed4cf1f8e249520729a7bd8abed2ccac2d"
 }

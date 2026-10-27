@@ -6,3 +6,5 @@ posts/*/status.js
 posts/*/.status*
 posts/*/office.html
 __pycache__/
+posts/*/.progress-server.json
+posts/*/.status.lock

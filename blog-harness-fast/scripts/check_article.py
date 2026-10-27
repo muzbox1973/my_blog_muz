@@ -16,6 +16,7 @@ import os
 import re
 import struct
 import sys
+from _local_paths import contained_path
 
 
 def png_size(path):
@@ -118,7 +119,11 @@ def check_visuals(r, sec, base_dir, final):
     for x in rows:
         if not x["alt"] or x["alt"] in ("-", "{alt}"):
             r.fail("VISUALS_ALT", f"{x['file']} alt 비어 있음")
-        fp = os.path.join(base_dir, x["file"]) if base_dir is not None else None
+        try:
+            fp = contained_path(base_dir, x["file"]) if base_dir is not None else None
+        except ValueError:
+            r.fail("VISUALS_PATH", f"작업 폴더 밖 이미지 경로: {x['file']}")
+            continue
         if fp and not os.path.exists(fp):
             r.fail("VISUALS_FILE", f"이미지 파일 없음: {x['file']}")
         elif fp and png_size(fp):  # 비율: 썸네일은 1:1 또는 16:9, 본문 이미지는 가로형(16:9)

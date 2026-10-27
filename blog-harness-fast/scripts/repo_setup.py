@@ -30,6 +30,7 @@ import shutil
 import subprocess
 import sys
 from datetime import date
+from _local_paths import contained_path
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL = os.path.normpath(os.path.join(HERE, ".."))
@@ -45,7 +46,12 @@ def git(repo, *args, check=True):
 def sha(path):
     h = hashlib.sha256()
     with open(path, "rb") as f:
-        h.update(f.read())
+        data = f.read()
+    # Git on Windows may check text out as CRLF while the installation manifest
+    # was produced from LF files. Line endings alone are not a user code edit.
+    if os.path.splitext(path)[1].lower() in (".py", ".html"):
+        data = data.replace(b"\r\n", b"\n")
+    h.update(data)
     return h.hexdigest()
 
 
@@ -80,9 +86,10 @@ def bundle_files():
 def main():
     ap = argparse.ArgumentParser(description="git 저장소에 하네스 작업 폴더 준비")
     ap.add_argument("--repo", required=True, help="로컬 클론 경로")
-    ap.add_argument("--base", default="blog-harness-fast", help="저장소 안 하위 폴더 이름")
+    ap.add_argument("--base", required=True, help="저장소 안 하위 폴더 이름")
     ap.add_argument("--post", help="이번 글 폴더 이름 (예: 20261026-coffee-bean-storage)")
-    ap.add_argument("--owner"), ap.add_argument("--name"), ap.add_argument("--branch")
+    ap.add_argument("--owner"), ap.add_argument("--name"), ap.add_argument("--branch", required=True)
+    ap.add_argument("--remote-url", required=True, help="사용자가 지정한 저장소 URL")
     ap.add_argument("--cdn", choices=["jsdelivr", "raw", "custom"], help="이미지 주소 방식 (기본 jsdelivr)")
     ap.add_argument("--url-template", help="cdn=custom일 때: {owner} {repo} {ref} {path} 사용")
     ap.add_argument("--force", action="store_true", help="사용자가 고친 스크립트도 덮어쓰기")
@@ -94,7 +101,16 @@ def main():
     except Exception as e:  # noqa: BLE001
         print(f"[repo] git 저장소가 아님: {repo} ({e})", file=sys.stderr)
         sys.exit(2)
-    base = os.path.join(top, a.base)
+    actual_remote = git(top, "remote", "get-url", "origin", check=False)
+    normalize = lambda value: value.rstrip('/').removesuffix('.git')
+    if normalize(actual_remote) != normalize(a.remote_url):
+        raise SystemExit("[repo] 사용자 지정 저장소와 origin이 다릅니다")
+    current_branch = git(top, "symbolic-ref", "--short", "HEAD", check=False)
+    if current_branch != a.branch:
+        raise SystemExit("[repo] 사용자 지정 브랜치를 먼저 체크아웃하세요. 임의 브랜치로 대체하지 않습니다")
+    base = contained_path(top, a.base)
+    if a.post:
+        contained_path(os.path.join(base, "posts"), a.post)
     os.makedirs(os.path.join(base, "posts"), exist_ok=True)
 
     # 설정
@@ -109,6 +125,8 @@ def main():
         "owner": a.owner or cfg.get("owner") or owner,
         "repo": a.name or cfg.get("repo") or name,
         "branch": branch,
+        "remote_url": a.remote_url,
+        "target_confirmed": True,
         "base": a.base,
         "cdn": a.cdn or cfg.get("cdn") or "jsdelivr",
         "url_template": a.url_template or cfg.get("url_template"),
@@ -123,7 +141,7 @@ def main():
     log = {"추가": [], "갱신": [], "같음": 0, "사용자 수정 유지": [], "삭제": []}
     current = {rel for rel, _ in bundle_files()}
     for rel in [r for r in list(man) if r not in current and not r.startswith("assets/stickers/")]:
-        dst = os.path.join(base, rel)  # 새 버전에서 없어진 스크립트: 손대지 않은 설치본이면 지운다
+        dst = contained_path(base, rel)  # 새 버전에서 없어진 스크립트: 손대지 않은 설치본이면 지운다
         if os.path.exists(dst) and sha(dst) == man[rel]:
             os.remove(dst)
             log["삭제"].append(rel)
@@ -131,7 +149,7 @@ def main():
         elif not os.path.exists(dst):
             man.pop(rel)
     for rel, kind in bundle_files():
-        src, dst = os.path.join(SKILL, rel), os.path.join(base, rel)
+        src, dst = contained_path(SKILL, rel), contained_path(base, rel)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         if not os.path.exists(dst):
             shutil.copy2(src, dst)
@@ -176,6 +194,14 @@ def main():
         open(gi, "w", encoding="utf-8").write(
             "posts/*/preview.html\nposts/*/preview.png\nposts/*/visuals/*.html\nposts/*/status.json\n"
             "posts/*/status.js\nposts/*/.status*\nposts/*/office.html\n__pycache__/\n")
+    # Add transient UI state exclusions on upgrades too; preserve existing rules.
+    with open(gi, encoding="utf-8") as f:
+        ignore_text = f.read()
+    for rule in ("posts/*/.progress-server.json", "posts/*/.status.lock"):
+        if rule not in ignore_text.splitlines():
+            ignore_text += ("" if ignore_text.endswith("\n") else "\n") + rule + "\n"
+    with open(gi, "w", encoding="utf-8") as f:
+        f.write(ignore_text)
     readme = os.path.join(base, "README.md")
     if not os.path.exists(readme):
         open(readme, "w", encoding="utf-8").write(
@@ -186,7 +212,7 @@ def main():
 
     post = None
     if a.post:
-        post = os.path.join(base, "posts", a.post)
+        post = contained_path(os.path.join(base, "posts"), a.post)
         os.makedirs(os.path.join(post, "visuals"), exist_ok=True)
 
     print(f"[repo] 저장소: {cfg.get('owner')}/{cfg.get('repo')} @ {cfg['branch']}  (이미지 주소: {cfg['cdn']})")

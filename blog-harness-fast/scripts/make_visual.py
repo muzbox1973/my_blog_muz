@@ -2,9 +2,9 @@
 """기사용 썸네일·인포그래픽을 스티커(assets/stickers)로 꾸며 PNG로 만든다 (blog-seo-aeo-harness 5단계).
 
 사용법:
-    python3 make_visual.py visual-plan.json                          # visuals/ 에 PNG·HTML·리포트 생성
-    python3 make_visual.py visual-plan.json --package article-package.md   # 숫자 대조까지 (권장)
-    python3 make_visual.py visual-plan.json --only thumbnail          # 한 장만 다시
+    python3 make_visual.py visual-plan.json --package article-package.md # 확정 본문 기반 렌더
+    python3 make_visual.py visual-plan.json --package article-package.md   # 확정 원고 검사·숫자 대조 (필수)
+    python3 make_visual.py visual-plan.json --package article-package.md --only thumbnail          # 한 장만 다시
     python3 make_visual.py --list                                     # 스티커 목록 보기
 
 비율: 썸네일은 계획의 thumbnail_format(square 1080×1080 / landscape 1280×720, 사람이 고름),
@@ -26,6 +26,7 @@ import re
 import shutil
 import subprocess
 import sys
+from _local_paths import contained_path, image_id
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STK_DIR = os.path.normpath(os.environ.get("HARNESS_STICKERS") or os.path.join(HERE, "..", "assets", "stickers"))
@@ -125,6 +126,8 @@ class Report:
 def load_catalog():
     with open(os.path.join(STK_DIR, "stickers.json"), encoding="utf-8") as f:
         cat = json.load(f)
+    for s in cat["stickers"]:
+        contained_path(STK_DIR, s["file"])
     return {s["id"]: s for s in cat["stickers"]}
 
 
@@ -133,7 +136,7 @@ _URI = {}
 
 def uri(sid, cat):
     if sid not in _URI:
-        with open(os.path.join(STK_DIR, cat[sid]["file"]), "rb") as f:
+        with open(contained_path(STK_DIR, cat[sid]["file"]), "rb") as f:
             _URI[sid] = "data:image/png;base64," + base64.b64encode(f.read()).decode()
     return _URI[sid]
 
@@ -616,8 +619,10 @@ def collect_text(sp):
 
 
 def lint_plan(plan, cat, rep, package_text):
-    imgs = plan.get("images", [])
-    if not any(i.get("type") == "thumbnail" for i in imgs):
+    imgs = [im for im in plan.get("images", []) if not im.get("asset_id")]
+    if not imgs:
+        return
+    if not any(i.get("type") == "thumbnail" for i in plan.get("images", [])):
         rep.add("FAIL", "-", "THUMBNAIL", "썸네일(type: thumbnail)이 계획에 없음")
     for sp in imgs:
         if sp.get("type") == "thumbnail":
@@ -734,7 +739,7 @@ def build(cat, sp, iid, sth, side, k, seed):
 def main():
     ap = argparse.ArgumentParser(description="스티커로 꾸민 썸네일·인포그래픽 생성")
     ap.add_argument("plan", nargs="?", help="visual-plan.json")
-    ap.add_argument("--package", help="article-package.md (숫자 대조용)")
+    ap.add_argument("--package", help="검토·수정 완료한 article-package.md (렌더 시 필수)")
     ap.add_argument("--out", help="출력 폴더 (기본: 계획 파일 옆 visuals/)")
     ap.add_argument("--only", action="append", help="이 id만 다시 만들기 (여러 번 지정 가능)")
     ap.add_argument("--seed", help="무작위 씨앗 (기본: 실행마다 새로 뽑음. --only면 지난 실행 씨앗을 이어 씀)")
@@ -743,6 +748,22 @@ def main():
     ap.add_argument("--quality", type=int, default=90, help="WebP 품질 0~100 (기본 90)")
     ap.add_argument("--keep-png", action="store_true", help="WebP로 바꾼 뒤에도 PNG 원본 남기기")
     a = ap.parse_args()
+    def progress(state, detail):
+        if not a.package:
+            return
+        from pathlib import Path
+        import status
+        directory = Path(a.package).resolve().parent
+        if not (directory / "status.json").exists():
+            return
+        try:
+            with status.locked(directory):
+                current = status.load(directory)
+                if current.get("stage") == "5":
+                    status.do_set(current, "design", state, detail)
+                    status.save(directory, current)
+        except Exception as exc:
+            print(f"[status] 이미지 상태 갱신 실패: {exc}", file=sys.stderr)
     cat = load_catalog()
     if a.list:
         kinds = {}
@@ -760,6 +781,20 @@ def main():
         sys.exit(2)
     with open(a.plan, encoding="utf-8") as f:
         plan = json.load(f)
+    ids = [image_id(sp.get("id") or sp.get("type")) for sp in plan.get("images", [])]
+    if len(ids) != len(set(ids)):
+        raise SystemExit("Duplicate image ids are not allowed")
+    if not a.package:
+        ap.error("--package가 필요합니다. 본문 확정 후에만 이미지를 생성할 수 있습니다")
+    from article_state import require_ready
+    try:
+        article = require_ready(a.package, plan)
+        from image_assets import validate
+        reused, supplied_assets = validate(os.path.dirname(os.path.abspath(a.package)), plan, cat)
+    except (ValueError, OSError) as exc:
+        progress("blocked", str(exc))
+        ap.error(str(exc))
+    progress("working", "확정 본문 확인 완료 · 이미지 렌더 준비")
     plan_dir = os.path.dirname(os.path.abspath(a.plan))
     out = a.out or os.path.join(plan_dir, "visuals")
     os.makedirs(out, exist_ok=True)
@@ -772,7 +807,7 @@ def main():
         secs = re.findall(r"<!--\s*BEGIN:(\w+)\s*-->(.*?)<!--\s*END:\1\s*-->", raw, re.S)
         pkg = "\n".join(body for name, body in secs if name not in ("jsonld", "slug", "visuals")) if secs else raw
     lint_plan(plan, cat, rep, pkg)
-    if korean_font_ok() is False:
+    if any(not im.get("asset_id") for im in plan["images"]) and korean_font_ok() is False:
         rep.add("FAIL", "-", "FONT", "한글 글꼴 없음 — 글자가 네모로 깨짐. fonts-noto-cjk 설치 필요")
     # 무작위 씨앗: 실행할 때마다 새로 뽑아 테두리·스티커 위치가 매번 달라진다.
     # 같은 결과를 다시 만들려면 --seed(또는 계획의 "seed")에 visuals-report.json의 seed를 넣는다.
@@ -793,17 +828,23 @@ def main():
     th = dict(THEMES.get(plan.get("theme", "cream"), THEMES["cream"]), line=style["line"], _style=style)
     br = pw = None
     try:
+        if not any(not im.get("asset_id") for im in plan["images"]):
+            raise StopIteration
         from playwright.sync_api import sync_playwright
         pw = sync_playwright().start()
         br = pw.chromium.launch()
+    except StopIteration:
+        pass
     except Exception as e:  # noqa: BLE001
         rep.add("FAIL", "-", "RENDER", "PNG 렌더 불가 — HTML만 생성. `pip install playwright` 후 "
                 f"`python -m playwright install chromium` 필요 ({str(e)[:80]})")
-    usage = {}
+    from image_assets import copy_reused
+    usage = copy_reused(out, reused, plan)
     for idx, sp in enumerate(plan.get("images", [])):
         iid = sp.get("id") or sp.get("type")
-        if (a.only and iid not in a.only) or sp.get("type") not in BUILDERS:
+        if sp.get("asset_id") or (a.only and iid not in a.only) or sp.get("type") not in BUILDERS:
             continue
+        progress("working", f"{iid} 이미지 생성 중")
         sth = dict(THEMES[sp["theme"]], _style=pick_style(random.Random(seed + "|style"), THEMES[sp["theme"]], plan.get("border") if isinstance(plan.get("border"), dict) else None)) if sp.get("theme") in THEMES else th
         if sp.get("theme") in THEMES:
             sth["line"] = sth["_style"]["line"]
@@ -865,7 +906,7 @@ def main():
     if br:
         br.close()
         pw.stop()
-    report = {"seed": seed, "style": style, "images": usage, "checks": rep.items,
+    report = {"user_assets": supplied_assets, "article_sha256": article["sha256"], "seed": seed, "style": style, "images": usage, "checks": rep.items,
               "summary": {lv: sum(1 for i in rep.items if i["level"] == lv) for lv in ("FAIL", "WARN")}}
     with open(os.path.join(out, "visuals-report.json"), "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=1)
@@ -873,11 +914,16 @@ def main():
         print(f"[{it['level']}] {it['image']} {it['code']}: {it['msg']}")
     for iid, u in usage.items():
         ids = ", ".join(f"{s['id']}×{s['scale']}" for s in u["stickers"])
+        if u.get("source_kind") == "user":
+            print(f"[OK] {iid}: {u['file']} | 사용자 원본 그대로 사용 ({u['asset_id']})")
+            continue
         lay = u["layout"]
         print(f"[OK] {iid}: {u['file'] or '(PNG 없음)'} {u['size'][0]}x{u['size'][1]} | 캐릭터 {lay['side']}"
               f"{' (시도 ' + str(lay['attempts']) + '번)' if lay['attempts'] > 1 else ''} | 스티커: {ids}")
     print(f"\n요약: FAIL {report['summary']['FAIL']} / WARN {report['summary']['WARN']} → "
           + ("수정 필요" if rep.failed else "이미지 점검 통과"))
+    progress("blocked" if rep.failed else "working",
+             "이미지 점검 실패 · 보고서 확인 필요" if rep.failed else "이미지 렌더 완료 · 육안 확인 중")
     sys.exit(1 if rep.failed else 0)
 
 

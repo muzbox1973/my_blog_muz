@@ -23,6 +23,8 @@ import os
 import re
 import struct
 import sys
+from pathlib import Path
+from _local_paths import contained_path
 
 MARKER_RE = r"\[(?:확인 필요|경험 보강 필요|근거 보강 필요|사람 확인)[^\]]*\]"
 EXCLUDED_H2 = ("자주 묻는 질문", "FAQ", "마무리", "정리", "결론", "참고")
@@ -107,7 +109,7 @@ class Assets:
         if re.match(r"^https?://", rel):
             return rel
         key = os.path.normpath(rel).replace(os.sep, "/")
-        if not os.path.exists(os.path.join(self.base, key)):
+        if not os.path.exists(contained_path(self.base, key)):
             self.missing.append(key)
         if key in self.files:
             return self.files[key]
@@ -115,7 +117,7 @@ class Assets:
         return key
 
     def data_uri(self, rel):
-        p = os.path.join(self.base, rel)
+        p = contained_path(self.base, rel)
         if not os.path.exists(p):
             return None
         ext = os.path.splitext(p)[1].lower().lstrip(".")
@@ -459,7 +461,7 @@ def build_page(google, info, rows, assets, warns, local_map, status):
                    f'<br>스티커: {esc(r["stickers"])}<br>alt: {esc(r["alt"])}<br>{esc(url)}</div>'
                    f'<div style="margin-top:8px">{copy_btn(url, "주소 복사")}</div></div>')
     warn_html = ("<div class='pv-warn'><b>확인할 것</b><ul>" + "".join(f"<li>{esc(w)}</li>" for w in warns) + "</ul></div>") if warns else ""
-    js = PAGE_JS.replace("__LOCAL__", json.dumps(local_map))
+    js = PAGE_JS.replace("__LOCAL__", json.dumps(local_map).replace("<", "\\u003c"))
     return f"""<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>게시 미리보기 – {esc(info['rec'])}</title><style>{PAGE_CSS}</style></head><body>
 <div class="pv-top"><div class="in"><div><b>게시 미리보기</b> <span style="font-size:13px;opacity:.8">{esc(status)}</span></div>
@@ -558,7 +560,7 @@ def main():
             with sync_playwright() as p:
                 br = p.chromium.launch()
                 pg = br.new_page(viewport={"width": 1100, "height": 900})
-                pg.goto("file://" + hp)
+                pg.goto(Path(hp).resolve().as_uri())
                 pg.evaluate("document.querySelectorAll('img').forEach(i=>i.loading='eager')")  # 지연 로딩 때문에 아래쪽 이미지가 비어 찍히는 문제 방지
                 pg.wait_for_timeout(1500)
                 pg.add_style_tag(content=".pv-top{position:static}")
